@@ -82,6 +82,8 @@ pnpm acceptance:plan
 pnpm release:readiness
 ```
 
+如果页面退化成未加载样式的裸 HTML，通常是本地 Next `.next` 缓存与 dev server CSS 资源错配。处理步骤见 [`caishui-webapp/README.md`](./caishui-webapp/README.md#ui-rendering-troubleshooting)。
+
 ### Data Pipeline
 
 ```powershell

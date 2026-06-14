@@ -74,6 +74,39 @@ pnpm dev
 
 If port `3000` is occupied, Next may bind another port. Validate the actual bound port before browser testing.
 
+### UI Rendering Troubleshooting
+
+If a page renders as unstyled HTML, the most likely local-dev cause is a stale `.next` cache where the HTML references `/_next/static/css/app/layout.css` but the CSS asset returns `404`.
+
+First verify the symptom:
+
+```powershell
+$html = (Invoke-WebRequest -Uri http://127.0.0.1:3002/qa -UseBasicParsing).Content
+$css = [regex]::Match($html, 'href="([^"]+\.css[^"]*)"').Groups[1].Value
+Invoke-WebRequest -Uri ("http://127.0.0.1:3002" + $css) -UseBasicParsing
+```
+
+If the CSS request returns `404`, restart the dev server with a clean cache:
+
+```powershell
+# Find the exact Next dev server PID for the tested port.
+Get-NetTCPConnection -LocalPort 3002 -State Listen
+
+# After confirming the PID belongs to the current Next/node dev server:
+Stop-Process -Id <PID> -Force
+
+# Clear only the WebApp Next cache.
+Remove-Item -LiteralPath 'J:\tax\caishui-webapp\.next' -Recurse -Force
+
+# Restart on the tested port.
+cd J:\tax\caishui-webapp
+pnpm exec next dev -p 3002
+```
+
+Then hard-refresh the browser with `Ctrl + F5`.
+
+Do not use broad process kills such as `Stop-Process -Name node`; stop only the exact port owner you verified.
+
 ## Test
 
 ```powershell
