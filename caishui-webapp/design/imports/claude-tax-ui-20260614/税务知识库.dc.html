@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans SC', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; -webkit-font-smoothing: antialiased; color: #0F2A3C; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #CBDDEA; border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #AEC9DC; background-clip: padding-box; }
+  textarea, input, select, button { font-family: inherit; }
+  @keyframes caretBlink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulseDot { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+</style>
+</helmet>
+
+<div style="min-height:100vh;position:relative;overflow:hidden;background:linear-gradient(168deg,#F2F8FD 0%,#EAF4FB 38%,#F4FAFE 100%);">
+  <div style="position:absolute;top:-160px;right:-120px;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(43,179,192,0.16),rgba(43,179,192,0) 68%);pointer-events:none;"></div>
+  <div style="position:absolute;top:120px;left:-180px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(0,119,182,0.12),rgba(0,119,182,0) 68%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-220px;left:38%;width:640px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(76,175,143,0.10),rgba(76,175,143,0) 70%);pointer-events:none;"></div>
+
+  <nav style="position:relative;z-index:5;display:flex;align-items:center;height:60px;padding:0 28px;background:rgba(255,255,255,0.82);backdrop-filter:blur(10px);border-bottom:1px solid #DCEAF4;box-shadow:0 1px 2px rgba(15,58,90,0.03);">
+    <div style="display:flex;align-items:center;gap:11px;margin-right:36px;flex-shrink:0;cursor:pointer;" onClick="{{ goQA }}">
+      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,#0077B6,#2BB3C0);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,119,182,0.28);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 4.5h14M5 4.5v15M5 19.5h14M9.5 9h5M9.5 13h5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      </div>
+      <div style="line-height:1.15;">
+        <div style="font-size:15px;font-weight:700;color:#0F2A3C;letter-spacing:.2px;">{{ orgName }}</div>
+        <div style="font-size:11px;font-weight:500;color:#6B8294;letter-spacing:.5px;">税务知识库 · TAX KB</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;height:100%;">
+      <sc-for list="{{ navItems }}" as="nav" hint-placeholder-count="5">
+        <div onClick="{{ nav.onClick }}" style="{{ nav.style }}" style-hover="color:#0077B6;">{{ nav.label }}</div>
+      </sc-for>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <div style="display:flex;align-items:center;gap:7px;padding:5px 11px;border-radius:7px;background:#EAF7F2;border:1px solid #CFEBDF;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#4CAF8F;box-shadow:0 0 0 3px rgba(76,175,143,0.18);"></span>
+        <span style="font-size:12px;font-weight:500;color:#1F8A5B;white-space:nowrap;">知识库已就绪</span>
+      </div>
+      <button onClick="{{ newQuestion }}" style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px;border:none;border-radius:8px;background:linear-gradient(145deg,#0080C4,#006BA6);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,107,166,0.30);white-space:nowrap;" style-hover="background:linear-gradient(145deg,#0087CF,#0073B2);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>
+        新建问题
+      </button>
+      <div style="width:34px;height:34px;border-radius:50%;background:#E3F0F8;border:1px solid #CFE2EF;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#33617E;">审</div>
+    </div>
+  </nav>
+
+  <main style="position:relative;z-index:2;max-width:1320px;margin:0 auto;padding:26px 28px 56px;">
+
+    <!-- ===================== 智能问答 ===================== -->
+    <sc-if value="{{ showQA }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px;flex-wrap:wrap;">
+        <div>
+          <h1 style="margin:0 0 5px;font-size:22px;font-weight:700;color:#0F2A3C;letter-spacing:.3px;">税务政策智能问答</h1>
+          <p style="margin:0;font-size:13.5px;color:#5B7387;">所有回答均基于已核验的知识库引用生成，并标注政策来源。</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <span style="font-size:11px;font-weight:600;color:#8499A8;letter-spacing:.4px;">布局变体</span>
+            <div style="display:inline-flex;gap:2px;padding:3px;background:#EAF3FA;border:1px solid #DCEAF4;border-radius:8px;">
+              <sc-for list="{{ variantTabs }}" as="vt" hint-placeholder-count="3">
+                <div onClick="{{ vt.onClick }}" style="{{ vt.style }}">{{ vt.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <span style="font-size:11px;font-weight:600;color:#8499A8;letter-spacing:.4px;">演示状态</span>
+            <div style="display:inline-flex;gap:2px;padding:3px;background:#EAF3FA;border:1px solid #DCEAF4;border-radius:8px;flex-wrap:wrap;">
+              <sc-for list="{{ stateTabs }}" as="st" hint-placeholder-count="6">
+                <div onClick="{{ st.onClick }}" style="{{ st.style }}">{{ st.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="{{ qaLayoutStyle }}">
+        <!-- 左：会话历史（变体三栏） -->
+        <sc-if value="{{ showLeftRail }}" hint-placeholder-val="{{ false }}">
+        <aside style="width:228px;flex-shrink:0;background:#fff;border:1px solid #DCEAF4;border-radius:10px;box-shadow:0 1px 2px rgba(15,58,90,0.04);overflow:hidden;align-self:flex-start;">
+          <div style="padding:13px 15px;border-bottom:1px solid #EDF4F9;font-size:12px;font-weight:600;color:#5B7387;letter-spacing:.4px;">最近会话</div>
+          <div style="padding:8px;">
+            <sc-for list="{{ conversations }}" as="cv" hint-placeholder-count="4">
+              <div style="{{ cv.style }}" style-hover="background:#F1F7FC;">
+                <div style="font-size:13px;font-weight:500;color:#22414F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ cv.title }}</div>
+                <div style="font-size:11px;color:#94A6B3;margin-top:3px;">{{ cv.time }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </aside>
+        </sc-if>
+
+        <!-- 中：对话面板 -->
+        <section style="{{ chatPanelStyle }}">
+          <div style="flex:1;overflow-y:auto;padding:24px 26px 8px;">
+            <div style="margin:0 auto;max-width:{{ chatMaxWidth }};">
+              <!-- 欢迎 -->
+              <div style="display:flex;gap:13px;margin-bottom:22px;">
+                <div style="width:38px;height:38px;border-radius:10px;flex-shrink:0;background:linear-gradient(145deg,#0077B6,#2BB3C0);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,119,182,0.24);">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l7.5 4v5c0 4.5-3.1 7.6-7.5 9-4.4-1.4-7.5-4.5-7.5-9V7L12 3z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"></path><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </div>
+                <div style="padding-top:2px;">
+                  <div style="font-size:16px;font-weight:700;color:#0F2A3C;">税务政策知识助手</div>
+                  <div style="font-size:13px;color:#6B8294;margin-top:3px;line-height:1.6;">回答由已核验的知识库引用生成。遇到证据不足或来源失效时，会明确提示并保留审计快照。</div>
+                </div>
+              </div>
+
+              <!-- 用户提问 -->
+              <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+                <div style="max-width:78%;padding:11px 15px;border-radius:12px 12px 4px 12px;background:linear-gradient(145deg,#0080C4,#006BA6);color:#fff;font-size:14px;line-height:1.6;box-shadow:0 4px 12px rgba(0,107,166,0.22);">{{ lastQuestion }}</div>
+              </div>
+
+              <!-- 助手回答区域 -->
+              <div style="display:flex;gap:13px;">
+                <div style="width:34px;height:34px;border-radius:9px;flex-shrink:0;background:#E3F2FB;border:1px solid #C7E2F3;display:flex;align-items:center;justify-content:center;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3l7.5 4v5c0 4.5-3.1 7.6-7.5 9-4.4-1.4-7.5-4.5-7.5-9V7L12 3z" stroke="#0077B6" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+                </div>
+                <div style="flex:1;min-width:0;">
+
+                  <!-- 排队中 -->
+                  <sc-if value="{{ isQueue }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:inline-flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:#F4F8FB;border:1px dashed #C8DCEA;">
+                    <span style="display:inline-flex;gap:4px;">
+                      <span style="width:7px;height:7px;border-radius:50%;background:#0077B6;animation:pulseDot 1.1s infinite;"></span>
+                      <span style="width:7px;height:7px;border-radius:50%;background:#0077B6;animation:pulseDot 1.1s infinite .2s;"></span>
+                      <span style="width:7px;height:7px;border-radius:50%;background:#0077B6;animation:pulseDot 1.1s infinite .4s;"></span>
+                    </span>
+                    <span style="font-size:13px;color:#5B7387;">已加入处理队列，正在检索知识库…</span>
+                  </div>
+                  </sc-if>
+
+                  <!-- 流式中 -->
+                  <sc-if value="{{ isStreaming }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px 17px;border-radius:12px;background:#fff;border:1px solid #DCEAF4;box-shadow:0 1px 2px rgba(15,58,90,0.04);">
+                    <div style="display:inline-flex;align-items:center;gap:7px;margin-bottom:9px;padding:3px 9px;border-radius:5px;background:#E0F5F7;border:1px solid #BDE9ED;">
+                      <span style="width:11px;height:11px;border:2px solid #2BB3C0;border-top-color:transparent;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;"></span>
+                      <span style="font-size:11.5px;font-weight:600;color:#1E8A96;">正在生成回答</span>
+                    </div>
+                    <div style="font-size:14.5px;line-height:1.85;color:#243C49;">{{ streamingText }}<span style="display:inline-block;width:2px;height:16px;background:#0077B6;vertical-align:-2px;margin-left:1px;animation:caretBlink 1s step-end infinite;"></span></div>
+                  </div>
+                  </sc-if>
+
+                  <!-- 已回答 / 有限证据 -->
+                  <sc-if value="{{ isAnswered }}" hint-placeholder-val="{{ true }}">
+                  <div style="padding:16px 18px;border-radius:12px;background:#fff;border:1px solid #DCEAF4;box-shadow:0 1px 2px rgba(15,58,90,0.04);">
+                    <sc-if value="{{ isLimited }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:13px;padding:9px 12px;border-radius:8px;background:#FBF4E2;border:1px solid #F0DCA8;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M12 4L3 20h18L12 4z" stroke="#B7791F" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 10v4" stroke="#B7791F" stroke-width="1.8" stroke-linecap="round"></path><circle cx="12" cy="17" r="1" fill="#B7791F"></circle></svg>
+                      <div><div style="font-size:12.5px;font-weight:600;color:#9A6711;">有限证据</div><div style="font-size:12px;color:#A47B2A;line-height:1.55;margin-top:1px;">该回答仅基于检索到的已核验材料，可能并不完整，请结合官方原文核对。</div></div>
+                    </div>
+                    </sc-if>
+                    <div style="font-size:14.5px;line-height:1.9;color:#243C49;">
+                      <sc-for list="{{ answerSegments }}" as="seg" hint-placeholder-count="5">
+                        <sc-if value="{{ seg.isCite }}" hint-placeholder-val="{{ false }}"><sup onClick="{{ seg.onClick }}" style="display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:16px;padding:0 4px;margin:0 2px;font-size:11px;font-weight:700;color:#0077B6;background:#E3F2FB;border:1px solid #C2E0F2;border-radius:4px;cursor:pointer;vertical-align:super;">{{ seg.value }}</sup></sc-if>
+                        <sc-if value="{{ seg.isText }}" hint-placeholder-val="{{ true }}"><span>{{ seg.value }}</span></sc-if>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid #EDF4F9;">
+                      <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:5px;font-size:11.5px;font-weight:600;color:#1F8A5B;background:#E6F6EF;border:1px solid #BFE8D6;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#1F8A5B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                        引用已核验
+                      </span>
+                      <span style="font-size:12px;color:#8499A8;">基于 {{ citedCount }} 条知识库来源 · 已隐去内部推理过程</span>
+                    </div>
+
+                    <!-- 内联引用（聚焦居中变体） -->
+                    <sc-if value="{{ showInlineCites }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:14px;display:flex;flex-direction:column;gap:9px;">
+                      <sc-for list="{{ sources }}" as="src" hint-placeholder-count="2">
+                        <div style="{{ src.cardStyle }}">
+                          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+                            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;background:#0077B6;color:#fff;font-size:11px;font-weight:700;flex-shrink:0;">{{ src.n }}</span>
+                            <span style="font-size:13px;font-weight:600;color:#1B3A4A;line-height:1.4;">{{ src.title }}</span>
+                          </div>
+                          <div style="font-size:11.5px;color:#6B8294;line-height:1.6;padding-left:28px;">{{ src.docNo }} · {{ src.org }} · 生效 {{ src.effective }}</div>
+                          <div style="padding-left:28px;margin-top:6px;display:flex;gap:6px;">
+                            <span style="{{ src.retrBadge }}">{{ src.retrLabel }}</span>
+                            <span style="{{ src.verBadge }}">{{ src.verLabel }}</span>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                    </sc-if>
+                  </div>
+                  </sc-if>
+
+                  <!-- 无证据 -->
+                  <sc-if value="{{ isNoEvidence }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:22px 20px;border-radius:12px;background:#fff;border:1px solid #DCEAF4;text-align:center;box-shadow:0 1px 2px rgba(15,58,90,0.04);">
+                    <div style="width:46px;height:46px;border-radius:12px;margin:0 auto 12px;background:#F1F5F9;display:flex;align-items:center;justify-content:center;">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="#7C93A3" stroke-width="1.7"></circle><path d="M15.8 15.8L20 20" stroke="#7C93A3" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    </div>
+                    <div style="font-size:14.5px;font-weight:600;color:#2B4150;">未检索到与该问题相关的已核验知识库证据</div>
+                    <div style="font-size:13px;color:#6B8294;margin-top:6px;line-height:1.6;max-width:440px;margin-left:auto;margin-right:auto;">这并不代表政策不存在。请结合官方来源进一步核实，或调整提问的政策口径与时间范围。</div>
+                  </div>
+                  </sc-if>
+
+                  <!-- 管线不可用 -->
+                  <sc-if value="{{ isUnavailable }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:18px 20px;border-radius:12px;background:#FCEDED;border:1px solid #F2C9C9;">
+                    <div style="display:flex;gap:11px;align-items:flex-start;">
+                      <div style="width:40px;height:40px;border-radius:10px;flex-shrink:0;background:#F8DCDC;display:flex;align-items:center;justify-content:center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 4L3 20h18L12 4z" stroke="#C5363B" stroke-width="1.7" stroke-linejoin="round"></path><path d="M12 10v4" stroke="#C5363B" stroke-width="1.9" stroke-linecap="round"></path><circle cx="12" cy="17" r="1.1" fill="#C5363B"></circle></svg>
+                      </div>
+                      <div style="flex:1;">
+                        <div style="font-size:14.5px;font-weight:600;color:#A82E33;">数据管线暂时不可用</div>
+                        <div style="font-size:13px;color:#B4565A;margin-top:5px;line-height:1.6;">无法连接检索与向量化服务。请检查 data-pipeline 服务状态后重试；本次提问已保留，恢复后可继续。</div>
+                        <div style="display:flex;gap:9px;margin-top:11px;">
+                          <button onClick="{{ retryStream }}" style="height:32px;padding:0 14px;border:none;border-radius:7px;background:#C5363B;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;">重试</button>
+                          <button onClick="{{ goStatus }}" style="height:32px;padding:0 14px;border:1px solid #E3B2B4;border-radius:7px;background:#fff;color:#A82E33;font-size:12.5px;font-weight:600;cursor:pointer;">查看系统状态</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  </sc-if>
+
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 输入区 -->
+          <div style="border-top:1px solid #EDF4F9;padding:14px 26px 16px;background:rgba(248,251,253,0.7);">
+            <div style="margin:0 auto;max-width:{{ chatMaxWidth }};">
+              <div style="display:flex;gap:7px;margin-bottom:9px;flex-wrap:wrap;">
+                <sc-for list="{{ suggestions }}" as="sg" hint-placeholder-count="3">
+                  <div onClick="{{ sg.onClick }}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;background:#fff;border:1px solid #D7E6F1;font-size:12px;color:#3D6580;cursor:pointer;" style-hover="border-color:#0077B6;color:#0077B6;">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="#7BA7C4" stroke-width="2" stroke-linecap="round"></path></svg>
+                    {{ sg.text }}
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-end;background:#fff;border:1px solid #CFE0EE;border-radius:11px;padding:9px 9px 9px 15px;box-shadow:0 2px 8px rgba(15,58,90,0.05);" style-focus-within="border-color:#2BB3C0;box-shadow:0 0 0 3px rgba(43,179,192,0.15);">
+                <textarea value="{{ input }}" onChange="{{ onInput }}" onKeyDown="{{ onInputKey }}" rows="1" placeholder="输入税务政策问题，例如：研发费用加计扣除当前适用的政策与比例。" style="flex:1;border:none;outline:none;resize:none;font-size:14px;line-height:1.6;color:#243C49;background:transparent;max-height:120px;padding:6px 0;"></textarea>
+                <button onClick="{{ onSend }}" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 17px;border:none;border-radius:9px;background:linear-gradient(145deg,#0080C4,#006BA6);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;flex-shrink:0;box-shadow:0 3px 9px rgba(0,107,166,0.26);" style-hover="background:linear-gradient(145deg,#0087CF,#0073B2);">
+                  发送
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </button>
+              </div>
+              <div style="font-size:11px;color:#9AAEBC;margin-top:8px;text-align:center;">回答仅供参考，正式申报与执行请以现行有效的官方文件为准。</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 右：引用来源面板 -->
+        <sc-if value="{{ showRightRail }}" hint-placeholder-val="{{ true }}">
+        <aside style="width:352px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;align-self:flex-start;">
+          <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;box-shadow:0 1px 2px rgba(15,58,90,0.04);overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #EDF4F9;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 4h9l4 4v12H6V4z" stroke="#0077B6" stroke-width="1.6" stroke-linejoin="round"></path><path d="M14 4v5h5M9 13h6M9 16h6" stroke="#0077B6" stroke-width="1.6" stroke-linecap="round"></path></svg>
+                <span style="font-size:13.5px;font-weight:700;color:#1B3A4A;">引用来源</span>
+              </div>
+              <span style="font-size:12px;color:#8499A8;">{{ citedCount }} 条</span>
+            </div>
+            <div style="padding:12px;display:flex;flex-direction:column;gap:11px;">
+              <sc-for list="{{ sources }}" as="src" hint-placeholder-count="3">
+                <div style="{{ src.cardStyle }}">
+                  <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:5px;background:#0077B6;color:#fff;font-size:11px;font-weight:700;flex-shrink:0;">{{ src.n }}</span>
+                    <span style="font-size:13px;font-weight:600;color:#1B3A4A;line-height:1.45;">{{ src.title }}</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:11.5px;color:#6B8294;padding-left:29px;line-height:1.6;">
+                    <span style="color:#9AAEBC;">文号</span><span>{{ src.docNo }}</span>
+                    <span style="color:#9AAEBC;">来源</span><span>{{ src.org }}</span>
+                    <span style="color:#9AAEBC;">发布</span><span>{{ src.publish }}</span>
+                    <span style="color:#9AAEBC;">生效</span><span>{{ src.effective }}</span>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;padding-left:29px;">
+                    <span style="{{ src.retrBadge }}">{{ src.retrLabel }}</span>
+                    <span style="{{ src.verBadge }}">{{ src.verLabel }}</span>
+                  </div>
+                  <sc-if value="{{ src.withdrawn }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:9px;margin-left:29px;padding:7px 9px;border-radius:6px;background:#FBF4E2;border:1px solid #F0DCA8;font-size:11.5px;color:#9A6711;line-height:1.5;">该来源已从当前知识库撤回，仅保留历史引用快照供审计。</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:#EAF7F2;border:1px solid #CFEBDF;border-radius:10px;padding:13px 15px;">
+            <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#1F8A5B;margin-bottom:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3l7.5 4v5c0 4.5-3.1 7.6-7.5 9-4.4-1.4-7.5-4.5-7.5-9V7L12 3z" stroke="#1F8A5B" stroke-width="1.7" stroke-linejoin="round"></path><path d="M9 12l2 2 4-4" stroke="#1F8A5B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              证据充分度
+            </div>
+            <div style="font-size:11.5px;color:#3E7A63;line-height:1.65;">本次回答的核心结论由 2 条已核验政策条款支撑，来源健康度良好，无失效或撤回引用。</div>
+          </div>
+        </aside>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== 文档库 ===================== -->
+    <sc-if value="{{ showLibrary }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+        <div>
+          <h1 style="margin:0 0 5px;font-size:22px;font-weight:700;color:#0F2A3C;">文档库</h1>
+          <p style="margin:0;font-size:13.5px;color:#5B7387;">浏览源文档，查看处理、检索与就绪状态。撤回文档保留可见以供审计。</p>
+        </div>
+        <button onClick="{{ goUpload }}" style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px;border:none;border-radius:8px;background:linear-gradient(145deg,#0080C4,#006BA6);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,107,166,0.26);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M7 9l5-5 5 5M5 20h14" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          上传文档
+        </button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;background:#fff;border:1px solid #DCEAF4;border-radius:10px;padding:11px 13px;box-shadow:0 1px 2px rgba(15,58,90,0.04);">
+        <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:220px;height:36px;padding:0 12px;border:1px solid #D7E6F1;border-radius:8px;background:#F7FAFD;" style-focus-within="border-color:#2BB3C0;background:#fff;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="#7BA7C4" stroke-width="1.7"></circle><path d="M15.8 15.8L20 20" stroke="#7BA7C4" stroke-width="1.7" stroke-linecap="round"></path></svg>
+          <input value="{{ libSearch }}" onChange="{{ onLibSearch }}" placeholder="搜索文档标题、文号或来源…" style="flex:1;border:none;outline:none;background:transparent;font-size:13px;color:#243C49;"></input>
+        </div>
+        <select value="{{ libType }}" onChange="{{ onLibType }}" style="height:36px;padding:0 12px;border:1px solid #D7E6F1;border-radius:8px;background:#fff;font-size:13px;color:#3D6580;cursor:pointer;">
+          <option value="all">全部类型</option>
+          <option value="政策公告">政策公告</option>
+          <option value="操作指引">操作指引</option>
+          <option value="政策问答">政策问答</option>
+          <option value="政策汇编">政策汇编</option>
+          <option value="补充说明">补充说明</option>
+        </select>
+        <select value="{{ libProc }}" onChange="{{ onLibProc }}" style="height:36px;padding:0 12px;border:1px solid #D7E6F1;border-radius:8px;background:#fff;font-size:13px;color:#3D6580;cursor:pointer;">
+          <option value="all">全部处理状态</option>
+          <option value="COMPLETED">已完成</option>
+          <option value="PROCESSING">处理中</option>
+          <option value="PENDING">待处理</option>
+          <option value="FAILED">失败</option>
+          <option value="WITHDRAWN">已撤回</option>
+        </select>
+        <select value="{{ libRetr }}" onChange="{{ onLibRetr }}" style="height:36px;padding:0 12px;border:1px solid #D7E6F1;border-radius:8px;background:#fff;font-size:13px;color:#3D6580;cursor:pointer;">
+          <option value="all">全部检索状态</option>
+          <option value="RETRIEVABLE">可检索</option>
+          <option value="OFFLINE">已下线</option>
+          <option value="NONE">未就绪</option>
+        </select>
+      </div>
+
+      <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;box-shadow:0 1px 2px rgba(15,58,90,0.04);overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:980px;">
+            <thead>
+              <tr style="background:#F3F8FC;">
+                <th style="text-align:left;padding:11px 16px;font-size:11.5px;font-weight:600;color:#7990A0;letter-spacing:.3px;border-bottom:1px solid #E3EEF5;">文档标题</th>
+                <th style="text-align:left;padding:11px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">文号</th>
+                <th style="text-align:left;padding:11px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">来源</th>
+                <th style="text-align:left;padding:11px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">类型</th>
+                <th style="text-align:left;padding:11px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">处理状态</th>
+                <th style="text-align:left;padding:11px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">检索状态</th>
+                <th style="text-align:left;padding:11px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">就绪分块</th>
+                <th style="text-align:left;padding:11px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">上传时间</th>
+                <th style="text-align:right;padding:11px 16px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ filteredDocs }}" as="doc" hint-placeholder-count="6">
+                <tr style="{{ doc.rowStyle }}" style-hover="background:#F2F8FD;">
+                  <td style="padding:13px 16px;border-bottom:1px solid #EDF4F9;">
+                    <div style="font-weight:500;color:#1B3A4A;line-height:1.45;max-width:300px;">{{ doc.title }}</div>
+                    <sc-if value="{{ doc.hasReason }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:center;gap:5px;margin-top:5px;font-size:11.5px;color:#C5363B;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#C5363B" stroke-width="1.6"></circle><path d="M12 7v6" stroke="#C5363B" stroke-width="1.7" stroke-linecap="round"></path><circle cx="12" cy="16" r="1" fill="#C5363B"></circle></svg>
+                      {{ doc.reason }}
+                    </div>
+                    </sc-if>
+                  </td>
+                  <td style="padding:13px 12px;border-bottom:1px solid #EDF4F9;color:#5B7387;font-size:12px;">{{ doc.no }}</td>
+                  <td style="padding:13px 12px;border-bottom:1px solid #EDF4F9;color:#5B7387;">{{ doc.source }}</td>
+                  <td style="padding:13px 12px;border-bottom:1px solid #EDF4F9;color:#5B7387;">{{ doc.type }}</td>
+                  <td style="padding:13px 12px;border-bottom:1px solid #EDF4F9;"><span style="{{ doc.procBadge }}">{{ doc.procLabel }}</span></td>
+                  <td style="padding:13px 12px;border-bottom:1px solid #EDF4F9;"><span style="{{ doc.retrBadge }}">{{ doc.retrLabel }}</span></td>
+                  <td style="padding:13px 12px;border-bottom:1px solid #EDF4F9;color:#3D6580;font-variant-numeric:tabular-nums;">{{ doc.chunks }}</td>
+                  <td style="padding:13px 12px;border-bottom:1px solid #EDF4F9;color:#8499A8;font-size:12px;font-variant-numeric:tabular-nums;">{{ doc.uploaded }}</td>
+                  <td style="padding:13px 16px;border-bottom:1px solid #EDF4F9;text-align:right;">
+                    <button onClick="{{ goReview }}" style="height:30px;padding:0 13px;border:1px solid #CFE0EE;border-radius:7px;background:#fff;color:#0077B6;font-size:12.5px;font-weight:600;cursor:pointer;" style-hover="border-color:#0077B6;background:#F2F8FD;">查看分块</button>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid #EDF4F9;background:#FAFCFE;">
+          <span style="font-size:12.5px;color:#8499A8;">共 {{ filteredCount }} 个文档</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:12.5px;color:#8499A8;">每页 20 条</span>
+            <button style="width:30px;height:30px;border:1px solid #DCEAF4;border-radius:7px;background:#fff;color:#9AAEBC;cursor:not-allowed;">‹</button>
+            <button style="width:30px;height:30px;border:1px solid #0077B6;border-radius:7px;background:#0077B6;color:#fff;font-weight:600;cursor:pointer;">1</button>
+            <button style="width:30px;height:30px;border:1px solid #DCEAF4;border-radius:7px;background:#fff;color:#9AAEBC;cursor:not-allowed;">›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== 文档详情与分块审核 ===================== -->
+    <sc-if value="{{ showReview }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div onClick="{{ goLibrary }}" style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:#5B7387;cursor:pointer;margin-bottom:13px;" style-hover="color:#0077B6;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        返回文档库
+      </div>
+
+      <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;box-shadow:0 1px 2px rgba(15,58,90,0.04);padding:18px 20px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:280px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+              <h1 style="margin:0;font-size:19px;font-weight:700;color:#0F2A3C;line-height:1.35;">关于进一步完善研发费用税前加计扣除政策的公告</h1>
+              <sc-if value="{{ docWithdrawn }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:5px;font-size:11.5px;font-weight:600;color:#B7791F;background:#FBF1DC;border:1px solid #F0DCA8;">已撤回检索</span></sc-if>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,auto);gap:6px 26px;font-size:12.5px;color:#5B7387;justify-content:start;">
+              <div><span style="color:#9AAEBC;">文号　</span>财政部 税务总局公告2023年第7号</div>
+              <div><span style="color:#9AAEBC;">发布　</span>2023-03-26</div>
+              <div><span style="color:#9AAEBC;">生效　</span>2023-01-01</div>
+              <div><span style="color:#9AAEBC;">来源　</span>财政部</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;color:#1F8A5B;background:#E6F6EF;border:1px solid #BFE8D6;">处理完成 COMPLETED</span>
+              <span style="{{ reviewRetrBadge }}">{{ reviewRetrLabel }}</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+            <sc-if value="{{ docWithdrawn }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ toggleWithdraw }}" style="height:34px;padding:0 15px;border:1px solid #BFE8D6;border-radius:8px;background:#E6F6EF;color:#1F8A5B;font-size:12.5px;font-weight:600;cursor:pointer;">恢复检索</button>
+            </sc-if>
+            <sc-if value="{{ docActive }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ toggleWithdraw }}" style="height:34px;padding:0 15px;border:1px solid #F0DCA8;border-radius:8px;background:#FBF4E2;color:#B7791F;font-size:12.5px;font-weight:600;cursor:pointer;">从检索中撤回</button>
+            </sc-if>
+            <button style="height:34px;padding:0 15px;border:1px solid #F2C9C9;border-radius:8px;background:#fff;color:#C5363B;font-size:12.5px;font-weight:600;cursor:pointer;" style-hover="background:#FCEDED;">硬删除</button>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ docWithdrawn }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:9px;align-items:center;background:#FBF4E2;border:1px solid #F0DCA8;border-radius:9px;padding:11px 15px;margin-bottom:14px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 4L3 20h18L12 4z" stroke="#B7791F" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 10v4" stroke="#B7791F" stroke-width="1.8" stroke-linecap="round"></path><circle cx="12" cy="17" r="1" fill="#B7791F"></circle></svg>
+        <span style="font-size:13px;color:#9A6711;">该来源已从检索中撤回，分块不再参与问答；历史引用快照保留供审计，撤回期间不显示重试嵌入操作。</span>
+      </div>
+      </sc-if>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+        <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;padding:15px 17px;box-shadow:0 1px 2px rgba(15,58,90,0.04);">
+          <div style="font-size:12px;color:#7990A0;margin-bottom:6px;">可检索分块</div>
+          <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-size:26px;font-weight:700;color:#1F8A5B;">{{ readyCount }}</span><span style="font-size:13px;color:#9AAEBC;">/ {{ totalChunks }}</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;padding:15px 17px;box-shadow:0 1px 2px rgba(15,58,90,0.04);">
+          <div style="font-size:12px;color:#7990A0;margin-bottom:6px;">受阻分块</div>
+          <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-size:26px;font-weight:700;color:#C5363B;">{{ blockedCount }}</span><span style="font-size:13px;color:#9AAEBC;">需处理</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;padding:15px 17px;box-shadow:0 1px 2px rgba(15,58,90,0.04);">
+          <div style="font-size:12px;color:#7990A0;margin-bottom:6px;">待核验分块</div>
+          <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-size:26px;font-weight:700;color:#B7791F;">{{ unverifiedCount }}</span><span style="font-size:13px;color:#9AAEBC;">待审核</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+        <div style="font-size:14px;font-weight:700;color:#1B3A4A;">分块审核 · 第 {{ reviewPage }} / {{ reviewTotalPages }} 页</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button onClick="{{ prevPage }}" style="{{ prevBtnStyle }}">‹ 上一页</button>
+          <button onClick="{{ nextPage }}" style="{{ nextBtnStyle }}">下一页 ›</button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:11px;">
+        <sc-for list="{{ pagedChunks }}" as="ck" hint-placeholder-count="3">
+          <div style="background:#fff;border:1px solid #DCEAF4;border-left:3px solid {{ ck.accent }};border-radius:9px;box-shadow:0 1px 2px rgba(15,58,90,0.04);padding:14px 16px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+              <span style="font-size:13px;font-weight:700;color:#33617E;font-variant-numeric:tabular-nums;">分块 {{ ck.idx }}</span>
+              <span style="font-size:11.5px;color:#7990A0;padding:2px 8px;border-radius:5px;background:#F1F5F9;">{{ ck.type }}</span>
+              <span style="{{ ck.verBadge }}">{{ ck.verLabel }}</span>
+              <span style="{{ ck.embBadge }}">{{ ck.embLabel }}</span>
+              <span style="{{ ck.readyBadge }}">{{ ck.readyLabel }}</span>
+              <span style="margin-left:auto;font-size:11.5px;color:#9AAEBC;">生效 {{ ck.effective }} · 失效 {{ ck.expiry }}</span>
+            </div>
+            <div style="font-size:13.5px;line-height:1.75;color:#33485A;background:#F8FBFD;border:1px solid #EAF2F8;border-radius:7px;padding:10px 13px;">{{ ck.content }}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap;">
+              <span style="font-size:11px;color:#9AAEBC;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">hash {{ ck.hash }}</span>
+              <sc-if value="{{ ck.hasNote }}" hint-placeholder-val="{{ false }}">
+              <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#9A6711;background:#FBF4E2;border:1px solid #F0DCA8;border-radius:5px;padding:2px 8px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 4L3 20h18L12 4z" stroke="#B7791F" stroke-width="1.7" stroke-linejoin="round"></path><path d="M12 10v3.5" stroke="#B7791F" stroke-width="1.8" stroke-linecap="round"></path><circle cx="12" cy="16.5" r="1" fill="#B7791F"></circle></svg>
+                {{ ck.note }}
+              </span>
+              </sc-if>
+              <div style="margin-left:auto;display:flex;gap:7px;">
+                <button onClick="{{ ck.onVerify }}" style="{{ ck.verifyBtn }}">通过</button>
+                <button onClick="{{ ck.onReject }}" style="{{ ck.rejectBtn }}">拒绝</button>
+                <sc-if value="{{ ck.showRetry }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ ck.onRetry }}" style="height:30px;padding:0 12px;border:1px solid #C2E0F2;border-radius:7px;background:#E3F2FB;color:#006BA6;font-size:12.5px;font-weight:600;cursor:pointer;">重试嵌入</button>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px;">
+        <button onClick="{{ prevPage }}" style="{{ prevBtnStyle }}">‹ 上一页</button>
+        <span style="font-size:12.5px;color:#8499A8;padding:0 8px;">第 {{ reviewPage }} / {{ reviewTotalPages }} 页 · 共 {{ totalChunks }} 个分块</span>
+        <button onClick="{{ nextPage }}" style="{{ nextBtnStyle }}">下一页 ›</button>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== 上传管理 ===================== -->
+    <sc-if value="{{ showUpload }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="margin-bottom:16px;">
+        <h1 style="margin:0 0 5px;font-size:22px;font-weight:700;color:#0F2A3C;">上传源文档</h1>
+        <p style="margin:0;font-size:13.5px;color:#5B7387;">上传政策原文，预览解析分块并启动入库。入库后将进入审核与向量化流程。</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:16px;align-items:start;">
+        <!-- 左：上传表单 -->
+        <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;box-shadow:0 1px 2px rgba(15,58,90,0.04);padding:18px;">
+          <div style="border:1.5px dashed #B9D5E8;border-radius:10px;background:#F4FAFE;padding:26px 18px;text-align:center;cursor:pointer;" style-hover="border-color:#2BB3C0;background:#EFF8FD;">
+            <div style="width:46px;height:46px;border-radius:12px;margin:0 auto 11px;background:#E3F2FB;display:flex;align-items:center;justify-content:center;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 16V5M7 10l5-5 5 5" stroke="#0077B6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5 16v3h14v-3" stroke="#0077B6" stroke-width="1.8" stroke-linecap="round"></path></svg>
+            </div>
+            <div style="font-size:13.5px;font-weight:600;color:#1B3A4A;">将文件拖拽到此处，或点击选择</div>
+            <div style="font-size:12px;color:#8499A8;margin-top:5px;">支持 PDF / DOCX / TXT，单个文件不超过 50 MB</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:13px;margin-top:18px;">
+            <div>
+              <label style="display:block;font-size:12.5px;font-weight:600;color:#5B7387;margin-bottom:6px;">来源渠道</label>
+              <select style="width:100%;height:38px;padding:0 12px;border:1px solid #D7E6F1;border-radius:8px;background:#fff;font-size:13px;color:#3D6580;cursor:pointer;">
+                <option>财政部</option><option>国家税务总局</option><option>上海市税务局</option><option>科技部</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:12.5px;font-weight:600;color:#5B7387;margin-bottom:6px;">文档类型</label>
+              <select style="width:100%;height:38px;padding:0 12px;border:1px solid #D7E6F1;border-radius:8px;background:#fff;font-size:13px;color:#3D6580;cursor:pointer;">
+                <option>政策公告</option><option>操作指引</option><option>政策问答</option><option>政策汇编</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:12.5px;font-weight:600;color:#5B7387;margin-bottom:6px;">标题</label>
+              <input placeholder="例如：关于进一步完善研发费用税前加计扣除政策的公告" style="width:100%;height:38px;padding:0 12px;border:1px solid #D7E6F1;border-radius:8px;background:#fff;font-size:13px;color:#243C49;outline:none;" style-focus="border-color:#2BB3C0;"></input>
+            </div>
+            <div>
+              <label style="display:block;font-size:12.5px;font-weight:600;color:#5B7387;margin-bottom:6px;">文档号 <span style="color:#9AAEBC;font-weight:400;">（可选）</span></label>
+              <input placeholder="例如：财政部 税务总局公告2023年第7号" style="width:100%;height:38px;padding:0 12px;border:1px solid #D7E6F1;border-radius:8px;background:#fff;font-size:13px;color:#243C49;outline:none;" style-focus="border-color:#2BB3C0;"></input>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:9px;margin-top:18px;">
+            <button onClick="{{ doPreview }}" style="flex:1;height:40px;border:1px solid #CFE0EE;border-radius:8px;background:#fff;color:#0077B6;font-size:13.5px;font-weight:600;cursor:pointer;" style-hover="border-color:#0077B6;background:#F2F8FD;">预览分块</button>
+            <button onClick="{{ doIngest }}" style="flex:1;height:40px;border:none;border-radius:8px;background:linear-gradient(145deg,#0080C4,#006BA6);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,107,166,0.24);">开始入库</button>
+          </div>
+          <div style="display:flex;gap:7px;margin-top:10px;justify-content:center;">
+            <span style="font-size:11px;color:#9AAEBC;">演示其它状态：</span>
+            <span onClick="{{ demoUnavailable }}" style="font-size:11px;color:#0077B6;cursor:pointer;text-decoration:underline;">管线不可用</span>
+            <span onClick="{{ demoFailed }}" style="font-size:11px;color:#C5363B;cursor:pointer;text-decoration:underline;">入库失败</span>
+            <span onClick="{{ demoReset }}" style="font-size:11px;color:#8499A8;cursor:pointer;text-decoration:underline;">重置</span>
+          </div>
+        </div>
+
+        <!-- 右：预览结果 -->
+        <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;box-shadow:0 1px 2px rgba(15,58,90,0.04);min-height:360px;display:flex;flex-direction:column;">
+          <div style="padding:14px 18px;border-bottom:1px solid #EDF4F9;font-size:13.5px;font-weight:700;color:#1B3A4A;">解析预览</div>
+          <div style="flex:1;padding:18px;">
+
+            <sc-if value="{{ upEmpty }}" hint-placeholder-val="{{ true }}">
+            <div style="height:100%;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+              <div style="width:52px;height:52px;border-radius:13px;background:#F1F5F9;display:flex;align-items:center;justify-content:center;margin-bottom:13px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 4h9l4 4v12H6V4z" stroke="#9AAEBC" stroke-width="1.6" stroke-linejoin="round"></path><path d="M14 4v5h5" stroke="#9AAEBC" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="font-size:13.5px;color:#6B8294;">上传文件并点击「预览分块」后，此处显示解析结果</div>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ upLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <span style="width:30px;height:30px;border:3px solid #C7E2F3;border-top-color:#0077B6;border-radius:50%;display:inline-block;animation:spin .8s linear infinite;margin-bottom:13px;"></span>
+              <div style="font-size:13.5px;color:#5B7387;">正在解析文档并切分政策条款…</div>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ upSuccess }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display:flex;gap:9px;align-items:flex-start;padding:11px 13px;border-radius:8px;background:#FBF4E2;border:1px solid #F0DCA8;margin-bottom:14px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M12 4L3 20h18L12 4z" stroke="#B7791F" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 10v4" stroke="#B7791F" stroke-width="1.8" stroke-linecap="round"></path><circle cx="12" cy="17" r="1" fill="#B7791F"></circle></svg>
+                <span style="font-size:12px;color:#9A6711;line-height:1.55;">检测到 2 个分块缺少明确生效日期，将标记为待人工确认。</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:16px;">
+                <div style="background:#F4FAFE;border:1px solid #E0EEF7;border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:#7990A0;">预览 ID</div><div style="font-size:13px;font-weight:600;color:#1B3A4A;font-family:ui-monospace,monospace;margin-top:3px;">PREV-9F3C2A</div></div>
+                <div style="background:#F4FAFE;border:1px solid #E0EEF7;border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:#7990A0;">解析分块数</div><div style="font-size:13px;font-weight:600;color:#1B3A4A;margin-top:3px;">42 块</div></div>
+                <div style="background:#F4FAFE;border:1px solid #E0EEF7;border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:#7990A0;">识别类型</div><div style="font-size:13px;font-weight:600;color:#1B3A4A;margin-top:3px;">政策公告</div></div>
+                <div style="background:#F4FAFE;border:1px solid #E0EEF7;border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:#7990A0;">识别文号</div><div style="font-size:12px;font-weight:600;color:#1B3A4A;margin-top:3px;">…公告2023年第7号</div></div>
+              </div>
+              <div style="font-size:12.5px;font-weight:600;color:#5B7387;margin-bottom:9px;">预览分块（前 3 块）</div>
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <sc-for list="{{ previewChunks }}" as="pc" hint-placeholder-count="3">
+                  <div style="border:1px solid #E6EFF6;border-radius:8px;padding:11px 13px;background:#FCFEFF;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                      <span style="font-size:11.5px;color:#7990A0;padding:2px 8px;border-radius:5px;background:#F1F5F9;">{{ pc.type }}</span>
+                      <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;color:#B7791F;background:#FBF1DC;border:1px solid #F0DCA8;">待核验</span>
+                      <span style="margin-left:auto;font-size:11px;color:#9AAEBC;">生效 {{ pc.effective }} · 失效 {{ pc.expiry }}</span>
+                    </div>
+                    <div style="font-size:12.5px;line-height:1.65;color:#43586A;">{{ pc.snippet }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ upUnavailable }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+              <div style="width:52px;height:52px;border-radius:13px;background:#FCEDED;display:flex;align-items:center;justify-content:center;margin-bottom:13px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4L3 20h18L12 4z" stroke="#C5363B" stroke-width="1.7" stroke-linejoin="round"></path><path d="M12 10v4" stroke="#C5363B" stroke-width="1.9" stroke-linecap="round"></path><circle cx="12" cy="17" r="1.1" fill="#C5363B"></circle></svg>
+              </div>
+              <div style="font-size:14px;font-weight:600;color:#A82E33;">数据管线暂时不可用</div>
+              <div style="font-size:12.5px;color:#B4565A;margin-top:6px;max-width:340px;line-height:1.6;">无法连接解析服务，预览未能完成。请检查 data-pipeline 服务状态后重试。</div>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ upAccepted }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+              <div style="width:52px;height:52px;border-radius:13px;background:#E6F6EF;display:flex;align-items:center;justify-content:center;margin-bottom:13px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#1F8A5B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="font-size:14px;font-weight:600;color:#1F8A5B;">入库请求已受理</div>
+              <div style="font-size:12.5px;color:#3E7A63;margin-top:6px;max-width:360px;line-height:1.6;">文档已进入处理队列，将依次完成解析、分块核验与向量化。可在文档库中跟踪处理与检索状态。</div>
+              <button onClick="{{ goLibrary }}" style="margin-top:14px;height:34px;padding:0 16px;border:1px solid #BFE8D6;border-radius:8px;background:#fff;color:#1F8A5B;font-size:12.5px;font-weight:600;cursor:pointer;">前往文档库</button>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ upFailed }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+              <div style="width:52px;height:52px;border-radius:13px;background:#FCEDED;display:flex;align-items:center;justify-content:center;margin-bottom:13px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#C5363B" stroke-width="1.7"></circle><path d="M9 9l6 6M15 9l-6 6" stroke="#C5363B" stroke-width="1.8" stroke-linecap="round"></path></svg>
+              </div>
+              <div style="font-size:14px;font-weight:600;color:#A82E33;">文档入库失败</div>
+              <div style="font-size:12.5px;color:#B4565A;margin-top:6px;max-width:360px;line-height:1.6;">失败原因：PDF 文档已加密，无法提取正文文本。请解除加密后重新上传。</div>
+              <button style="margin-top:14px;height:34px;padding:0 16px;border:1px solid #E3B2B4;border-radius:8px;background:#fff;color:#A82E33;font-size:12.5px;font-weight:600;cursor:pointer;">查看失败的源文档</button>
+            </div>
+            </sc-if>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 最近上传 -->
+      <div style="margin-top:18px;background:#fff;border:1px solid #DCEAF4;border-radius:10px;box-shadow:0 1px 2px rgba(15,58,90,0.04);overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid #EDF4F9;font-size:13.5px;font-weight:700;color:#1B3A4A;">最近上传</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:720px;">
+            <thead>
+              <tr style="background:#F3F8FC;">
+                <th style="text-align:left;padding:10px 18px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">文档标题</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">处理状态</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">检索状态</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">失败原因</th>
+                <th style="text-align:right;padding:10px 18px;font-size:11.5px;font-weight:600;color:#7990A0;border-bottom:1px solid #E3EEF5;">详情</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ recentUploads }}" as="ru" hint-placeholder-count="3">
+                <tr style-hover="background:#F2F8FD;">
+                  <td style="padding:12px 18px;border-bottom:1px solid #EDF4F9;color:#1B3A4A;font-weight:500;">{{ ru.title }}</td>
+                  <td style="padding:12px 12px;border-bottom:1px solid #EDF4F9;"><span style="{{ ru.procBadge }}">{{ ru.procLabel }}</span></td>
+                  <td style="padding:12px 12px;border-bottom:1px solid #EDF4F9;"><span style="{{ ru.retrBadge }}">{{ ru.retrLabel }}</span></td>
+                  <td style="padding:12px 12px;border-bottom:1px solid #EDF4F9;font-size:12px;color:#C5363B;">{{ ru.reason }}</td>
+                  <td style="padding:12px 18px;border-bottom:1px solid #EDF4F9;text-align:right;"><span onClick="{{ goReview }}" style="font-size:12.5px;color:#0077B6;cursor:pointer;font-weight:600;">查看 ›</span></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== 系统状态 ===================== -->
+    <sc-if value="{{ showStatus }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="margin-bottom:16px;">
+        <h1 style="margin:0 0 5px;font-size:22px;font-weight:700;color:#0F2A3C;">系统验收状态</h1>
+        <p style="margin:0;font-size:13.5px;color:#5B7387;">检查 WebApp、数据管线、PostgreSQL、向量化 Provider 与对话模型的本地验收就绪情况。</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;">
+        <sc-for list="{{ statusStrip }}" as="ss" hint-placeholder-count="5">
+          <div style="background:#fff;border:1px solid #DCEAF4;border-top:3px solid {{ ss.accent }};border-radius:10px;padding:14px 15px;box-shadow:0 1px 2px rgba(15,58,90,0.04);">
+            <div style="font-size:12.5px;color:#5B7387;margin-bottom:9px;height:34px;line-height:1.35;">{{ ss.name }}</div>
+            <span style="{{ ss.badge }}">{{ ss.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start;">
+        <!-- 验收清单 -->
+        <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;box-shadow:0 1px 2px rgba(15,58,90,0.04);padding:18px 20px;">
+          <div style="font-size:14px;font-weight:700;color:#1B3A4A;margin-bottom:16px;">验收清单</div>
+          <div style="display:flex;flex-direction:column;">
+            <sc-for list="{{ checklist }}" as="cl" hint-placeholder-count="8">
+              <div style="display:flex;gap:13px;">
+                <div style="display:flex;flex-direction:column;align-items:center;">
+                  <div style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{ cl.iconBg }};border:1px solid {{ cl.iconBorder }};">{{ cl.icon }}</div>
+                  <div style="{{ cl.lineStyle }}"></div>
+                </div>
+                <div style="padding-bottom:16px;flex:1;">
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <span style="font-size:13.5px;font-weight:600;color:#22414F;">{{ cl.title }}</span>
+                    <span style="{{ cl.badge }}">{{ cl.label }}</span>
+                  </div>
+                  <div style="font-size:12px;color:#8499A8;margin-top:3px;">{{ cl.detail }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- 右：环境告警 + 命令 -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="background:#FBF4E2;border:1px solid #F0DCA8;border-radius:10px;padding:15px 16px;">
+            <div style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:#9A6711;margin-bottom:10px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 4L3 20h18L12 4z" stroke="#B7791F" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 10v4" stroke="#B7791F" stroke-width="1.8" stroke-linecap="round"></path><circle cx="12" cy="17" r="1" fill="#B7791F"></circle></svg>
+              环境告警
+            </div>
+            <div style="font-size:12.5px;color:#A47B2A;line-height:1.7;">缺少环境变量将导致向量化 Provider 阻塞，线上 E2E 冒烟无法执行。</div>
+            <div style="margin-top:11px;display:flex;flex-direction:column;gap:7px;">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:ui-monospace,monospace;color:#8A5A12;background:#FCF8EC;border:1px solid #F0DCA8;border-radius:6px;padding:6px 10px;">
+                <span style="width:6px;height:6px;border-radius:50%;background:#C5363B;flex-shrink:0;"></span>EMBEDDING_API_KEY <span style="margin-left:auto;color:#C5363B;">未配置</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:ui-monospace,monospace;color:#8A5A12;background:#FCF8EC;border:1px solid #F0DCA8;border-radius:6px;padding:6px 10px;">
+                <span style="width:6px;height:6px;border-radius:50%;background:#B7791F;flex-shrink:0;"></span>DEEPSEEK_BASE_URL <span style="margin-left:auto;color:#B7791F;">使用默认</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #DCEAF4;border-radius:10px;box-shadow:0 1px 2px rgba(15,58,90,0.04);padding:15px 16px;">
+            <div style="font-size:13px;font-weight:700;color:#1B3A4A;margin-bottom:10px;">最近一次运行输出</div>
+            <div style="font-size:11.5px;color:#5B7387;line-height:1.7;margin-bottom:12px;">迁移合约、类型检查与本地构建均已通过；发布就绪检查进行中，Provider 冒烟因缺少密钥被跳过。</div>
+            <div style="font-size:12px;font-weight:600;color:#5B7387;margin-bottom:7px;">常用命令</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <sc-for list="{{ commands }}" as="cmd" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#33485A;background:#F3F6F9;border:1px solid #E3EAF0;border-radius:6px;padding:7px 11px;">
+                  <span style="color:#0077B6;">$</span><span style="flex:1;">{{ cmd }}</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;cursor:pointer;"><rect x="8" y="8" width="11" height="11" rx="2" stroke="#9AAEBC" stroke-width="1.6"></rect><path d="M5 15V5h10" stroke="#9AAEBC" stroke-width="1.6"></path></svg>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860},&quot;orgName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;上海露西文化&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = {
+    page: 'qa',
+    qaVariant: 1,
+    qaState: 'answered',
+    input: '',
+    streamingText: '',
+    lastQuestion: '研发费用加计扣除当前适用的政策是什么？加计扣除比例是多少？',
+    libSearch: '', libType: 'all', libProc: 'all', libRetr: 'all',
+    chunks: this.initialChunks(),
+    reviewPage: 1,
+    docWithdrawn: false,
+    uploadState: 'empty',
+  };
+
+  componentWillUnmount() { clearTimeout(this._t1); clearInterval(this._iv); clearTimeout(this._t2); }
+
+  initialChunks() {
+    return [
+      { id:1, idx:'#001', type:'政策条款', verify:'verified', embed:'completed', effective:'2023-01-01', expiry:'长期有效', hash:'a3f9c1b0…d72b', note:'', content:'自 2023 年 1 月 1 日起，企业开展研发活动中实际发生的研发费用，未形成无形资产计入当期损益的，在按规定据实扣除的基础上，再按照实际发生额的 100% 在税前加计扣除；形成无形资产的，按照无形资产成本的 200% 在税前摊销。' },
+      { id:2, idx:'#002', type:'政策条款', verify:'verified', embed:'pending', effective:'2023-01-01', expiry:'长期有效', hash:'7c21e9a4…11fa', note:'人工核验已通过，但向量化任务触发失败，核验结果未回滚，请重试嵌入。', content:'企业预缴申报当年第三季度（按季预缴）或 9 月份（按月预缴）企业所得税时，可自主选择就上半年研发费用享受加计扣除优惠政策。' },
+      { id:3, idx:'#003', type:'定义说明', verify:'unverified', embed:'completed', effective:'2023-01-01', expiry:'长期有效', hash:'b5d0fe27…9c3e', note:'', content:'研发活动，是指企业为获得科学与技术新知识，创造性运用科学技术新知识，或实质性改进技术、产品（服务）、工艺而持续进行的具有明确目标的系统性活动。' },
+      { id:4, idx:'#004', type:'适用范围', verify:'rejected', embed:'failed', effective:'—', expiry:'—', hash:'e8a7c440…5b18', note:'内容与现行口径存在冲突，已拒绝并退回上传方核对。', content:'烟草制造业、住宿和餐饮业、批发和零售业、房地产业、租赁和商务服务业、娱乐业等不适用税前加计扣除政策。' },
+      { id:5, idx:'#005', type:'政策条款', verify:'verified', embed:'completed', effective:'2023-01-01', expiry:'长期有效', hash:'1f6b2d90…a7cc', note:'', content:'企业委托外部机构或个人进行研发活动所发生的费用，按照费用实际发生额的 80% 计入委托方研发费用并计算加计扣除。' },
+      { id:6, idx:'#006', type:'操作说明', verify:'unverified', embed:'completed', effective:'2023-01-01', expiry:'长期有效', hash:'9d3a0c7e…4f02', note:'', content:'企业应按国家财务会计制度要求对研发支出进行会计处理；对享受加计扣除的研发费用按研发项目设置辅助账，准确归集核算。' },
+    ];
+  }
+
+  // ---------- palettes ----------
+  pal(kind) {
+    const P = {
+      green:{ color:'#1F8A5B', background:'#E6F6EF', border:'1px solid #BFE8D6' },
+      blue:{ color:'#006BA6', background:'#E3F2FB', border:'1px solid #BBE0F2' },
+      cyan:{ color:'#1E8A96', background:'#E0F5F7', border:'1px solid #BDE9ED' },
+      amber:{ color:'#B7791F', background:'#FBF1DC', border:'1px solid #F0DCA8' },
+      red:{ color:'#C5363B', background:'#FBE7E7', border:'1px solid #F2C9C9' },
+      gray:{ color:'#64748B', background:'#EEF2F6', border:'1px solid #DCE3EB' },
+    };
+    return P[kind] || P.gray;
+  }
+  badge(kind) {
+    const p = this.pal(kind);
+    return { display:'inline-flex', alignItems:'center', gap:'5px', padding:'2px 9px', borderRadius:'5px', fontSize:'11.5px', fontWeight:600, lineHeight:'18px', whiteSpace:'nowrap', ...p };
+  }
+
+  // ---------- navigation ----------
+  go(page) { clearTimeout(this._t1); clearInterval(this._iv); this.setState({ page }); window.scrollTo(0, 0); }
+
+  renderVals() {
+    const s = this.state;
+    const set = (patch) => this.setState(patch);
+
+    // nav
+    const navDefs = [
+      { key:'qa', label:'智能问答' }, { key:'library', label:'文档库' },
+      { key:'upload', label:'上传管理' }, { key:'review', label:'审核中心' }, { key:'status', label:'系统状态' },
+    ];
+    const navItems = navDefs.map(n => {
+      const active = s.page === n.key;
+      return { label:n.label, onClick:() => this.go(n.key),
+        style:{ display:'inline-flex', alignItems:'center', height:'40px', padding:'0 12px', fontSize:'14px', fontWeight: active?700:500, color: active?'#0077B6':'#52697B', borderRadius:'8px', background: active?'#E9F4FB':'transparent', cursor:'pointer', transition:'all .15s', whiteSpace:'nowrap' } };
+    });
+
+    // ---- Q&A variant flags ----
+    const v = s.qaVariant;
+    const showLeftRail = v === 3;
+    const showRightRail = v === 1 || v === 3;
+    const showInlineCites = v === 2;
+    const chatMaxWidth = v === 2 ? '780px' : '100%';
+    const qaLayoutStyle = { display:'flex', gap:'16px', alignItems:'stretch', minHeight:'620px' };
+    const chatPanelStyle = { flex:1, minWidth:0, display:'flex', flexDirection:'column', background:'rgba(255,255,255,0.86)', border:'1px solid #DCEAF4', borderRadius:'12px', boxShadow:'0 2px 10px rgba(15,58,90,0.05)', overflow:'hidden', height:'620px' };
+
+    const variantTabs = [ {k:1,label:'经典双栏'}, {k:2,label:'聚焦居中'}, {k:3,label:'会话三栏'} ].map(t => ({
+      label:t.label, onClick:() => set({ qaVariant:t.k }), style:this.segStyle(s.qaVariant === t.k)
+    }));
+    const stateDefs = [ {k:'answered',l:'已回答'}, {k:'streaming',l:'流式回答'}, {k:'queue',l:'排队中'}, {k:'limited',l:'有限证据'}, {k:'no-evidence',l:'无证据'}, {k:'unavailable',l:'管线不可用'} ];
+    const stateTabs = stateDefs.map(t => ({
+      label:t.l, onClick:() => this.setQaState(t.k), style:this.segStyle(s.qaState === t.k)
+    }));
+
+    // ---- Q&A state booleans ----
+    const isQueue = s.qaState === 'queue';
+    const isStreaming = s.qaState === 'streaming';
+    const isAnswered = s.qaState === 'answered' || s.qaState === 'limited';
+    const isLimited = s.qaState === 'limited';
+    const isNoEvidence = s.qaState === 'no-evidence';
+    const isUnavailable = s.qaState === 'unavailable';
+
+    // answer segments
+    const cite = (n) => ({ isCite:true, isText:false, value:n, onClick:() => {} });
+    const txt = (t) => ({ isCite:false, isText:true, value:t });
+    const answerSegments = [
+      txt('自 2023 年 1 月 1 日起，企业开展研发活动实际发生的研发费用，未形成无形资产计入当期损益的，在按规定据实扣除的基础上，再按实际发生额的 100% 在税前加计扣除'),
+      cite('1'),
+      txt('。形成无形资产的，按照无形资产成本的 200% 在税前摊销'),
+      cite('2'),
+      txt('。上述加计扣除作为制度性安排长期实施，不再设置政策执行期限'),
+      cite('1'),
+      txt('。'),
+    ];
+
+    // sources
+    const srcCard = { background:'#FCFEFF', border:'1px solid #E6EFF6', borderRadius:'8px', padding:'11px 13px' };
+    const srcCardW = { background:'#FCFBF6', border:'1px solid #EFE3C8', borderRadius:'8px', padding:'11px 13px' };
+    const sources = [
+      { n:'1', title:'关于进一步完善研发费用税前加计扣除政策的公告', docNo:'财政部 税务总局公告2023年第7号', org:'财政部', publish:'2023-03-26', effective:'2023-01-01', withdrawn:false, cardStyle:srcCard, retrBadge:this.badge('green'), retrLabel:'可检索', verBadge:this.badge('green'), verLabel:'已核验' },
+      { n:'2', title:'研发费用加计扣除政策执行指引（2.0 版）', docNo:'税总所得税便函〔2023〕16 号', org:'国家税务总局', publish:'2023-05-10', effective:'2023-01-01', withdrawn:false, cardStyle:srcCard, retrBadge:this.badge('green'), retrLabel:'可检索', verBadge:this.badge('green'), verLabel:'已核验' },
+      { n:'3', title:'研发费用归集范围补充说明（地方口径）', docNo:'沪税便函〔2021〕— 号', org:'上海市税务局', publish:'2021-08-02', effective:'—', withdrawn:true, cardStyle:srcCardW, retrBadge:this.badge('amber'), retrLabel:'已下线', verBadge:this.badge('amber'), verLabel:'已撤回' },
+    ];
+    const citedCount = 3;
+
+    const suggestions = [
+      { text:'委托研发的加计扣除如何计算？' },
+      { text:'哪些行业不适用加计扣除？' },
+      { text:'预缴时可以享受加计扣除吗？' },
+    ].map(g => ({ text:g.text, onClick:() => this.ask(g.text) }));
+
+    const conversations = [
+      { title:'研发费用加计扣除适用政策与比例', time:'今天 10:24', active:true },
+      { title:'小型微利企业所得税优惠', time:'今天 09:50', active:false },
+      { title:'增值税期末留抵退税条件', time:'昨天 17:12', active:false },
+      { title:'高新技术企业认定研发占比', time:'昨天 15:03', active:false },
+    ].map(c => ({ title:c.title, time:c.time, style:{ padding:'9px 11px', borderRadius:'8px', marginBottom:'3px', cursor:'pointer', background: c.active ? '#E9F4FB' : 'transparent', borderLeft: c.active ? '2px solid #0077B6' : '2px solid transparent' } }));
+
+    // ---- Library ----
+    const docs = [
+      { title:'关于进一步完善研发费用税前加计扣除政策的公告', no:'财政部 税务总局公告2023年第7号', source:'财政部', type:'政策公告', proc:'COMPLETED', retr:'RETRIEVABLE', chunks:'42 / 42', uploaded:'2023-04-02 09:14', reason:'' },
+      { title:'研发费用加计扣除政策执行指引（2.0 版）', no:'税总所得税便函〔2023〕16 号', source:'国家税务总局', type:'操作指引', proc:'COMPLETED', retr:'RETRIEVABLE', chunks:'88 / 88', uploaded:'2023-05-12 16:30', reason:'' },
+      { title:'小型微利企业所得税优惠政策问答', no:'—', source:'国家税务总局', type:'政策问答', proc:'PROCESSING', retr:'NONE', chunks:'12 / 30', uploaded:'2024-01-08 10:02', reason:'' },
+      { title:'增值税期末留抵退税政策汇编', no:'财政部 税务总局公告2022年第14号', source:'财政部', type:'政策汇编', proc:'PENDING', retr:'NONE', chunks:'0 / 0', uploaded:'2024-01-09 08:45', reason:'' },
+      { title:'研发费用归集范围补充说明（地方口径）', no:'沪税便函〔2021〕— 号', source:'上海市税务局', type:'补充说明', proc:'WITHDRAWN', retr:'OFFLINE', chunks:'— / 36', uploaded:'2021-08-05 14:20', reason:'', muted:true },
+      { title:'高新技术企业认定管理工作指引', no:'国科发火〔2016〕195 号', source:'科技部', type:'操作指引', proc:'FAILED', retr:'NONE', chunks:'0 / 56', uploaded:'2024-01-07 19:11', reason:'解析失败：PDF 文档已加密，无法提取正文文本' },
+    ];
+    const procMap = { COMPLETED:['green','已完成'], PROCESSING:['blue','处理中'], PENDING:['blue','待处理'], FAILED:['red','失败'], WITHDRAWN:['amber','已撤回'] };
+    const retrMap = { RETRIEVABLE:['green','可检索'], OFFLINE:['amber','已下线'], NONE:['gray','未就绪'] };
+    const filteredDocs = docs.filter(d => {
+      if (s.libType !== 'all' && d.type !== s.libType) return false;
+      if (s.libProc !== 'all' && d.proc !== s.libProc) return false;
+      if (s.libRetr !== 'all' && d.retr !== s.libRetr) return false;
+      if (s.libSearch && !((d.title + d.no + d.source).includes(s.libSearch))) return false;
+      return true;
+    }).map(d => ({
+      title:d.title, no:d.no, source:d.source, type:d.type, chunks:d.chunks, uploaded:d.uploaded,
+      reason:d.reason, hasReason: !!d.reason,
+      rowStyle: d.muted ? { background:'#FAFBFC', opacity:0.72 } : {},
+      procBadge:this.badge(procMap[d.proc][0]), procLabel:procMap[d.proc][1],
+      retrBadge:this.badge(retrMap[d.retr][0]), retrLabel:retrMap[d.retr][1],
+    }));
+
+    // ---- Review ----
+    const verMap = { verified:['green','已核验'], unverified:['amber','待核验'], rejected:['red','已拒绝'] };
+    const embMap = { completed:['green','已嵌入'], pending:['amber','待嵌入'], processing:['blue','嵌入中'], failed:['red','嵌入失败'] };
+    const chunksVM = s.chunks.map(c => {
+      const ready = c.verify === 'verified' && c.embed === 'completed' && !s.docWithdrawn;
+      const accent = c.verify === 'rejected' || c.embed === 'failed' ? '#E0A8A8' : (ready ? '#9FD9BF' : '#EFD79B');
+      return {
+        idx:c.idx, type:c.type, content:c.content, hash:c.hash,
+        effective:c.effective, expiry:c.expiry, note:c.note, hasNote: !!c.note, accent,
+        verBadge:this.badge(verMap[c.verify][0]), verLabel:verMap[c.verify][1],
+        embBadge:this.badge(embMap[c.embed][0]), embLabel:embMap[c.embed][1],
+        readyBadge:this.badge(ready ? 'green' : 'gray'), readyLabel: ready ? '可检索' : '未就绪',
+        showRetry: c.embed !== 'completed' && !s.docWithdrawn,
+        verifyBtn:{ height:'30px', padding:'0 12px', border:'1px solid #BFE8D6', borderRadius:'7px', background:'#E6F6EF', color:'#1F8A5B', fontSize:'12.5px', fontWeight:600, cursor:'pointer' },
+        rejectBtn:{ height:'30px', padding:'0 12px', border:'1px solid #F2C9C9', borderRadius:'7px', background:'#fff', color:'#C5363B', fontSize:'12.5px', fontWeight:600, cursor:'pointer' },
+        onVerify:() => this.chunkAction(c.id, 'verify'),
+        onReject:() => this.chunkAction(c.id, 'reject'),
+        onRetry:() => this.chunkAction(c.id, 'retry'),
+      };
+    });
+    const readyCount = s.chunks.filter(c => c.verify==='verified' && c.embed==='completed' && !s.docWithdrawn).length;
+    const blockedCount = s.chunks.filter(c => c.verify==='rejected' || c.embed==='failed').length;
+    const unverifiedCount = s.chunks.filter(c => c.verify==='unverified').length;
+    const totalChunks = s.chunks.length;
+    const pageSize = 3;
+    const reviewTotalPages = Math.max(1, Math.ceil(totalChunks / pageSize));
+    const reviewPage = Math.min(s.reviewPage, reviewTotalPages);
+    const pagedChunks = chunksVM.slice((reviewPage-1)*pageSize, reviewPage*pageSize);
+    const navBtn = (enabled) => ({ height:'30px', padding:'0 13px', border:'1px solid '+(enabled?'#CFE0EE':'#E6EFF6'), borderRadius:'7px', background:'#fff', color: enabled?'#0077B6':'#BFCEDA', fontSize:'12.5px', fontWeight:600, cursor: enabled?'pointer':'not-allowed' });
+
+    // ---- Upload ----
+    const recentUploads = [
+      { title:'研发费用加计扣除政策执行指引（2.0 版）', proc:'COMPLETED', retr:'RETRIEVABLE', reason:'—' },
+      { title:'小型微利企业所得税优惠政策问答', proc:'PROCESSING', retr:'NONE', reason:'—' },
+      { title:'高新技术企业认定管理工作指引', proc:'FAILED', retr:'NONE', reason:'PDF 文档已加密' },
+    ].map(r => ({ title:r.title, reason:r.reason, procBadge:this.badge(procMap[r.proc][0]), procLabel:procMap[r.proc][1], retrBadge:this.badge(retrMap[r.retr][0]), retrLabel:retrMap[r.retr][1] }));
+    const previewChunks = [
+      { type:'政策条款', effective:'2023-01-01', expiry:'长期有效', snippet:'自 2023 年 1 月 1 日起，企业开展研发活动实际发生的研发费用，未形成无形资产计入当期损益的，再按实际发生额的 100% 在税前加计扣除。' },
+      { type:'政策条款', effective:'2023-01-01', expiry:'长期有效', snippet:'形成无形资产的，按照无形资产成本的 200% 在税前摊销。' },
+      { type:'定义说明', effective:'待确认', expiry:'—', snippet:'研发活动，是指企业为获得科学与技术新知识，创造性运用科学技术新知识的系统性活动。' },
+    ];
+
+    // ---- System status ----
+    const stMap = { ready:['green','就绪 ready'], blocked:['amber','阻塞 blocked'], failed:['red','失败 failed'], skipped:['gray','跳过 skipped'], running:['blue','进行中 running'] };
+    const stAccent = { ready:'#4CAF8F', blocked:'#E0A82E', failed:'#D8484E', skipped:'#9AAEBC', running:'#2BB3C0' };
+    const statusStrip = [
+      { name:'WebApp', st:'ready' }, { name:'数据管线 Data Pipeline', st:'ready' }, { name:'PostgreSQL', st:'ready' },
+      { name:'向量化 Provider', st:'blocked' }, { name:'DeepSeek Chat', st:'ready' },
+    ].map(x => ({ name:x.name, accent:stAccent[x.st], badge:this.badge(stMap[x.st][0]), label:stMap[x.st][1] }));
+
+    const checkDefs = [
+      { t:'迁移合约 Migration contract', st:'ready', d:'数据库迁移与契约校验通过' },
+      { t:'合约一致性 Contract parity', st:'ready', d:'前后端接口契约一致' },
+      { t:'类型检查 Typecheck', st:'ready', d:'tsc 无类型错误' },
+      { t:'WebApp 测试', st:'ready', d:'42 项用例全部通过' },
+      { t:'本地构建 Local build', st:'ready', d:'生产构建成功，产物体积正常' },
+      { t:'发布就绪 Release readiness', st:'running', d:'正在校验版本与变更日志…' },
+      { t:'线上 E2E 冒烟 Live E2E smoke', st:'blocked', d:'缺少向量化密钥，无法连通检索链路' },
+      { t:'Provider 冒烟 Provider smoke', st:'skipped', d:'未配置 Provider 密钥，已跳过' },
+    ];
+    const checkIcon = (st) => {
+      if (st === 'ready') return React.createElement('svg',{width:13,height:13,viewBox:'0 0 24 24',fill:'none'},React.createElement('path',{d:'M5 12l4 4 10-10',stroke:'#1F8A5B',strokeWidth:2.6,strokeLinecap:'round',strokeLinejoin:'round'}));
+      if (st === 'running') return React.createElement('span',{style:{width:'11px',height:'11px',border:'2px solid #2BB3C0',borderTopColor:'transparent',borderRadius:'50%',display:'inline-block',animation:'spin .7s linear infinite'}});
+      if (st === 'blocked') return React.createElement('svg',{width:13,height:13,viewBox:'0 0 24 24',fill:'none'},React.createElement('path',{d:'M12 8v4',stroke:'#B7791F',strokeWidth:2,strokeLinecap:'round'}),React.createElement('circle',{cx:12,cy:16,r:1,fill:'#B7791F'}));
+      return React.createElement('span',{style:{width:'9px',height:'2px',background:'#9AAEBC',borderRadius:'2px'}});
+    };
+    const iconBgMap = { ready:'#E6F6EF', running:'#E0F5F7', blocked:'#FBF1DC', skipped:'#EEF2F6' };
+    const iconBdMap = { ready:'#BFE8D6', running:'#BDE9ED', blocked:'#F0DCA8', skipped:'#DCE3EB' };
+    const checklist = checkDefs.map((c, i) => ({
+      title:c.t, detail:c.d, icon:checkIcon(c.st),
+      iconBg:iconBgMap[c.st], iconBorder:iconBdMap[c.st],
+      badge:this.badge(stMap[c.st][0]), label:stMap[c.st][1],
+      lineStyle:{ width:'2px', flex:1, minHeight:'14px', background: i < checkDefs.length-1 ? '#E3EEF5' : 'transparent', marginTop:'2px' },
+    }));
+    const commands = [ 'pnpm acceptance:contract', 'pnpm acceptance:build && pnpm acceptance:test', 'pnpm acceptance:e2e --smoke' ];
+
+    // review header badges
+    const reviewRetr = s.docWithdrawn ? ['amber','已撤回检索 OFFLINE'] : ['green','可检索 RETRIEVABLE'];
+
+    return {
+      orgName: this.props.orgName ?? '上海露西文化',
+      navItems,
+      goQA:() => this.go('qa'), goLibrary:() => this.go('library'), goUpload:() => this.go('upload'),
+      goReview:() => this.go('review'), goStatus:() => this.go('status'),
+      newQuestion:() => { this.go('qa'); },
+      showQA: s.page==='qa', showLibrary: s.page==='library', showReview: s.page==='review',
+      showUpload: s.page==='upload', showStatus: s.page==='status',
+
+      // qa
+      variantTabs, stateTabs,
+      showLeftRail, showRightRail, showInlineCites, chatMaxWidth, qaLayoutStyle, chatPanelStyle,
+      isQueue, isStreaming, isAnswered, isLimited, isNoEvidence, isUnavailable,
+      lastQuestion: s.lastQuestion, streamingText: s.streamingText,
+      answerSegments, sources, citedCount, suggestions, conversations,
+      input: s.input,
+      onInput:(e) => set({ input:e.target.value }),
+      onInputKey:(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.onSend(); } },
+      onSend:() => this.onSend(),
+      retryStream:() => this.ask(s.lastQuestion),
+
+      // library
+      libSearch:s.libSearch, libType:s.libType, libProc:s.libProc, libRetr:s.libRetr,
+      onLibSearch:(e)=>set({libSearch:e.target.value}), onLibType:(e)=>set({libType:e.target.value}),
+      onLibProc:(e)=>set({libProc:e.target.value}), onLibRetr:(e)=>set({libRetr:e.target.value}),
+      filteredDocs, filteredCount:filteredDocs.length,
+
+      // review
+      docWithdrawn:s.docWithdrawn, docActive:!s.docWithdrawn,
+      toggleWithdraw:() => set({ docWithdrawn: !s.docWithdrawn }),
+      reviewRetrBadge:this.badge(reviewRetr[0]), reviewRetrLabel:reviewRetr[1],
+      readyCount, blockedCount, unverifiedCount, totalChunks,
+      pagedChunks, reviewPage, reviewTotalPages,
+      prevPage:() => set({ reviewPage: Math.max(1, reviewPage-1) }),
+      nextPage:() => set({ reviewPage: Math.min(reviewTotalPages, reviewPage+1) }),
+      prevBtnStyle:navBtn(reviewPage > 1), nextBtnStyle:navBtn(reviewPage < reviewTotalPages),
+
+      // upload
+      upEmpty:s.uploadState==='empty', upLoading:s.uploadState==='loading', upSuccess:s.uploadState==='success',
+      upUnavailable:s.uploadState==='unavailable', upAccepted:s.uploadState==='accepted', upFailed:s.uploadState==='failed',
+      doPreview:() => { set({ uploadState:'loading' }); clearTimeout(this._t2); this._t2 = setTimeout(() => this.setState({ uploadState:'success' }), 1100); },
+      doIngest:() => set({ uploadState:'accepted' }),
+      demoUnavailable:() => set({ uploadState:'unavailable' }), demoFailed:() => set({ uploadState:'failed' }), demoReset:() => set({ uploadState:'empty' }),
+      recentUploads, previewChunks,
+
+      // status
+      statusStrip, checklist, commands,
+    };
+  }
+
+  segStyle(active) {
+    return { padding:'5px 11px', fontSize:'12.5px', fontWeight: active?600:500, color: active?'#fff':'#52697B', background: active?'#0077B6':'transparent', borderRadius:'6px', cursor:'pointer', whiteSpace:'nowrap', transition:'all .15s' };
+  }
+
+  setQaState(st) {
+    clearTimeout(this._t1); clearInterval(this._iv);
+    if (st === 'streaming') { this.ask(this.state.lastQuestion); return; }
+    this.setState({ qaState: st, streamingText: '' });
+  }
+
+  ask(q) {
+    clearTimeout(this._t1); clearInterval(this._iv);
+    this.setState({ page:'qa', lastQuestion:q, qaState:'queue', streamingText:'' });
+    this._t1 = setTimeout(() => {
+      this.setState({ qaState:'streaming' });
+      const full = '自 2023 年 1 月 1 日起，企业开展研发活动实际发生的研发费用，未形成无形资产计入当期损益的，在按规定据实扣除的基础上，再按实际发生额的 100% 在税前加计扣除[1]。形成无形资产的，按照无形资产成本的 200% 在税前摊销[2]。上述加计扣除作为制度性安排长期实施，不再设置政策执行期限[1]。';
+      let i = 0;
+      this._iv = setInterval(() => {
+        i += 4;
+        if (i >= full.length) { i = full.length; clearInterval(this._iv); this.setState({ streamingText: full.slice(0, i) }); this._t1 = setTimeout(() => this.setState({ qaState:'answered', streamingText:'' }), 320); }
+        else { this.setState({ streamingText: full.slice(0, i) }); }
+      }, 28);
+    }, 750);
+  }
+
+  onSend() {
+    const q = (this.state.input || '').trim() || this.state.lastQuestion;
+    this.setState({ input:'' });
+    this.ask(q);
+  }
+
+  chunkAction(id, action) {
+    this.setState(s => {
+      const chunks = s.chunks.map(c => {
+        if (c.id !== id) return c;
+        if (action === 'verify') return { ...c, verify:'verified' };
+        if (action === 'reject') return { ...c, verify:'rejected' };
+        if (action === 'retry') return { ...c, embed:'processing' };
+        return c;
+      });
+      return { chunks };
+    });
+    if (action === 'retry') {
+      setTimeout(() => {
+        this.setState(s => ({ chunks: s.chunks.map(c => c.id === id ? { ...c, embed:'completed' } : c) }));
+      }, 1000);
+    }
+  }
+}
+</script>
+</body>
+</html>

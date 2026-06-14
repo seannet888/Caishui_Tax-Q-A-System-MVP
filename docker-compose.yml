@@ -1,0 +1,65 @@
+# docker-compose.yml（两个工程的父目录）
+# Docker Compose v2 起已废弃 version 字段，直接省略。
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: caishui_db
+      POSTGRES_USER: caishui
+      POSTGRES_PASSWORD: localdev_password
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caishui -d caishui_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  data-pipeline:
+    build: ./data-pipeline
+    environment:
+      DATABASE_URL: postgresql+asyncpg://caishui:localdev_password@postgres:5432/caishui_db
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      DEEPSEEK_BASE_URL: https://api.deepseek.com/v1
+      # Embedding 提供商独立于 DeepSeek（见 ADR-0006）
+      EMBEDDING_BASE_URL: https://api.siliconflow.cn/v1
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      EMBEDDING_MODEL: BAAI/bge-large-zh-v1.5
+      EMBEDDING_DIMENSION: "1024"
+      PIPELINE_SHARED_SECRET: ${PIPELINE_SHARED_SECRET:?PIPELINE_SHARED_SECRET must be set}
+      STORAGE_DIR: /data/uploads
+    expose:
+      - "8000"
+    volumes:
+      - pipeline_uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  caishui-webapp:
+    build: ./caishui-webapp
+    environment:
+      DATABASE_URL: postgresql://caishui:localdev_password@postgres:5432/caishui_db
+      DATA_PIPELINE_URL: http://data-pipeline:8000
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      EMBEDDING_BASE_URL: https://api.siliconflow.cn/v1
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      EMBEDDING_MODEL: BAAI/bge-large-zh-v1.5
+      EMBEDDING_DIMENSION: "1024"
+      PIPELINE_SHARED_SECRET: ${PIPELINE_SHARED_SECRET:?PIPELINE_SHARED_SECRET must be set}
+      PROMPT_TEMPLATE_VERSION: v1.1
+      EVIDENCE_SUFFICIENT_THRESHOLD: "0.55"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      data-pipeline:
+        condition: service_started
+
+volumes:
+  pgdata:
+  pipeline_uploads:

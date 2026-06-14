@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f2f8fd;
+  --foreground: #0f2a3c;
+  --cs-bg-start: #f2f8fd;
+  --cs-bg-mid: #eaf4fb;
+  --cs-bg-end: #f4fafe;
+  --cs-ink: #0f2a3c;
+  --cs-muted: #5b7387;
+  --cs-muted-2: #6b8294;
+  --cs-primary: #0077b6;
+  --cs-primary-dark: #006ba6;
+  --cs-primary-hover: #0087cf;
+  --cs-cyan: #2bb3c0;
+  --cs-success: #4caf8f;
+  --cs-success-bg: #eaf7f2;
+  --cs-warning: #a47b2a;
+  --cs-warning-bg: #fbf4e2;
+  --cs-danger: #a82e33;
+  --cs-danger-bg: #fceded;
+  --cs-border: #dceaf4;
+  --cs-divider: #edf4f9;
+  --cs-surface: rgba(255, 255, 255, 0.88);
+  --cs-surface-solid: #ffffff;
+  --cs-shadow-sm: 0 1px 2px rgba(15, 58, 90, 0.04);
+  --cs-shadow-md: 0 8px 20px rgba(15, 58, 90, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  color: var(--foreground);
+  background:
+    linear-gradient(168deg, var(--cs-bg-start) 0%, var(--cs-bg-mid) 42%, var(--cs-bg-end) 100%);
+  font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(43, 179, 192, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

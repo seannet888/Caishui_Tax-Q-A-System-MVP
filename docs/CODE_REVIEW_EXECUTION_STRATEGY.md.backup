@@ -1,0 +1,455 @@
+# 修改计划执行策略
+
+> 配套文档：[TDD 修补计划](./CODE_REVIEW_MODIFICATION_PLAN.md)  
+> 本文定义执行的**组织框架**（分支策略、依赖关系、验收标准、应急回退），不重复技术细节。
+
+---
+
+## 1. 分支与提交策略
+
+### 推荐方案：单分支 + 多点提交
+
+```bash
+# 从 main 拉新分支
+git checkout main
+git pull origin main
+git checkout -b fix/input-validation-and-cleanup
+
+# 每完成一个切片，立即提交
+git add .
+git commit -m "fix(upload): add file type/size validation for upload and preview endpoints"
+
+git add .
+git commit -m "fix(documents): sanitize page/pageSize query params to prevent NaN"
+
+git add .
+git commit -m "docs(conversation): label MVP ownership gap as pre-release blocker"
+
+git add .
+git commit -m "refactor(chat-turn): simplify no-evidence branch condition"
+
+git add .
+git commit -m "refactor(utils): extract getErrorMessage to lib/utils/error.ts"
+```
+
+**Commit Message 格式：** `type(scope): description`
+
+| type | 用途 | 示例 |
+|------|------|------|
+| `fix` | bug 修复、安全加固 | `fix(upload): reject oversized files` |
+| `refactor` | 代码重构，不改变行为 | `refactor(utils): dedup getErrorMessage` |
+| `docs` | 注释、文档变更 | `docs(api): label conversation ownership gap` |
+| `test` | 测试新增/修改 | `test(upload): add validation edge cases` |
+
+### 不推荐：每项一个独立分支
+
+| 优点 | 缺点 |
+|------|------|
+| 每个 PR 更小，review 聚焦 | 5 个分支管理成本高 |
+| CI 独立跑 | 如果有共享代码（如 `lib/utils/error.ts`），需要顺序合并 |
+|  | 容易遗漏跨项影响（如 dedup 后 import 路径变更） |
+
+---
+
+## 2. 任务依赖与并行执行矩阵
+
+```mermaid
+gantt
+    title 修改任务并行关系
+    dateFormat YYYY-MM-DD
+    section 可并行
+    Upload Boundary          :a1, 2026-06-15, 2d
+    Documents NaN           :a2, 2026-06-15, 1d
+    Conversation Docs       :a3, 2026-06-15, 1d
+    section 依赖
+    Chat-turn Simplify     :after a1, 1d
+    Dedup Cleanup          :after a3, 1d
+```
+
+### 依赖矩阵
+
+| 任务 | 可并行 with | 依赖 | 风险隔离 |
+|------|-------------|------|----------|
+| **1. Upload Boundary** | 2, 3 | 无 | 可独立部署（只影响上传入口） |
+| **2. Documents NaN** | 1, 3 | 无 | 可独立部署（只影响列表查询） |
+| **3. Conversation Docs** | 1, 2 | 无 | 只改注释，零风险 |
+| **4. Chat-turn Simplify** | 5 | 现有 test 覆盖 | 改条件分支，需确认无回归 |
+| **5. Dedup Cleanup** | 4 | 无 | 改 import 路径，需跑全量 test |
+
+### 推荐执行顺序（时间紧时）
+
+**最小可用集（Must Have）：**
+1. Upload Boundary（安全边界）
+2. Documents NaN（数据正确性）
+3. Conversation Docs（风险显式化）
+
+**完整集（Nice to Have）：**
+4. Chat-turn Simplify
+5. Dedup Cleanup
+
+---
+
+## 3. Definition of Done（每项收尾标准）
+
+### 1. Upload Input Boundary Hardening
+
+- [ ] `lib/knowledge/__tests__/upload-validation.test.ts` 全部通过（6 个以上边缘 case）
+- [ ] `app/api/upload/route.ts` 调用 `validateUploadFile` 并返回 400（如果文件不合法）
+- [ ] `app/api/pipeline/preview/route.ts` 调用同一验证函数
+- [ ] Manual test：用 Postman/curl 发送 `.exe`/空文件/20MB+ 文件，确认返回 400
+- [ ] 错误响应不回显原始文件名/路径
+- [ ] `pnpm typecheck` 通过
+
+**验收命令：**
+```powershell
+cd J:\tax\caishui-webapp
+pnpm vitest run lib/knowledge/__tests__/upload-validation.test.ts
+pnpm tsc --noEmit
+```
+
+---
+
+### 2. Documents API Query Parameter Safety
+
+- [ ] `parsePaginationParams` 函数已提取，有独立 test
+- [ ] `page=abc&pageSize=abc` 返回 200，且响应中 `page=1, pageSize=20`
+- [ ] `pageSize=999` 被 clamp 到 100
+- [ ] `page=0&pageSize=0` 回退到 `1/20`
+- [ ] `pnpm typecheck` 通过
+
+**验收命令：**
+```powershell
+cd J:\tax\caishui-webapp
+pnpm vitest run app/api/documents/__tests__/route.test.ts
+pnpm tsc --noEmit
+```
+
+---
+
+### 3. Conversation Identity Risk Documentation
+
+- [ ] `app/qa/components/conversation-identity.ts` 顶部有 `/** */` 注释块，标明 MVP 限制
+- [ ] `app/api/conversations/[conversationId]/answers/route.ts` GET handler 顶部有注释
+- [ ] `AGENTS.md` 或 `docs/ARCHITECTURE.md` 中有"上线前 Blocker"章节，包含 conversation ownership 校验
+- [ ] `git diff` 只显示注释新增，无代码逻辑变更
+
+**验收命令：**
+```powershell
+cd J:\tax\caishui-webapp
+git diff --stat
+# 应该只显示 .ts 文件的注释新增，无逻辑代码变更
+```
+
+---
+
+### 4. Chat Turn No-Evidence Branch Simplification
+
+- [ ] 现有 `lib/knowledge/__tests__/chat-turn.test.ts` 通过（确认覆盖）
+- [ ] 如覆盖不足，补一个 focused test（非 `generate` 时持久化 deterministic answer）
+- [ ] 条件从 `policy.action === "no_evidence" || policy.action !== "generate"` 简化为 `policy.action !== "generate"`
+- [ ] 改完后 `pnpm vitest run lib/knowledge/__tests__` 无回归
+- [ ] `pnpm typecheck` 通过
+
+**验收命令：**
+```powershell
+cd J:\tax\caishui-webapp
+pnpm vitest run lib/knowledge/__tests__/chat-turn.test.ts
+pnpm tsc --noEmit
+```
+
+---
+
+### 5. Low-Risk Dedup Cleanup
+
+#### 5a. `getErrorMessage` 去重
+
+- [ ] `lib/utils/error.ts` 已创建，`getErrorMessage` 已提取
+- [ ] `lib/knowledge/retrieval-failure-answer.ts` 等 5 个文件已改为 import
+- [ ] `grep -r "function getErrorMessage" lib/` 只返回 1 个结果
+- [ ] `pnpm vitest run lib/knowledge/__tests__ lib/smoke/__tests__` 通过
+- [ ] `pnpm typecheck` 通过
+
+#### 5b. runbook helper 去重（可选）
+
+- [ ] 仅当两个 helper **完全同语义**时才提取
+- [ ] 提取后 `git diff` 显示的输出文本变更 ≤ 5 行（避免无意中改变 runbook 格式）
+
+#### 5c. 错误分类逻辑（暂不合并）
+
+- [ ] 确认 `retrieval-failure-answer.ts` 和 `provider-connectivity-diagnostics.ts` 的语义差异
+- [ ] 如果差异明确，在代码注释中标注"有意不合并"，避免未来重复提出
+
+**验收命令：**
+```powershell
+cd J:\tax\caishui-webapp
+pnpm vitest run lib/knowledge/__tests__ lib/smoke/__tests__
+pnpm tsc --noEmit
+grep -r "function getErrorMessage" lib/  # 应该只返回 1 个结果
+```
+
+---
+
+## 4. 应急回退策略
+
+### 4.1 常量通过环境变量可覆盖
+
+所有新增常量必须通过环境变量可覆盖，避免硬编码导致应急时无法快速调整：
+
+```typescript
+// lib/config/constants.ts
+
+export const MAX_UPLOAD_BYTES =
+  process.env.MAX_UPLOAD_BYTES
+    ? Number(process.env.MAX_UPLOAD_BYTES)
+    : 20 * 1024 * 1024;
+
+export const ALLOWED_EXTENSIONS =
+  process.env.ALLOWED_EXTENSIONS?.split(',') ??
+  ['.pdf', '.md', '.txt', '.csv', '.xlsx'];
+
+export const MAX_PAGE_SIZE =
+  process.env.MAX_PAGE_SIZE
+    ? Number(process.env.MAX_PAGE_SIZE)
+    : 100;
+```
+
+**如果线上出问题：**
+1. 临时调大 `MAX_UPLOAD_BYTES` → 不用改代码重新部署
+2. 如果发现误拦了某个合法文件类型 → 调整 `ALLOWED_EXTENSIONS` 环境变量
+
+---
+
+### 4.2 验证规则灰度策略（推荐）
+
+如果担心验证规则太严格导致合法文件被误拦，可以实现"日志模式"：
+
+```typescript
+// lib/knowledge/upload-validation.ts
+
+function validateUploadFile(file: File): ValidationResult {
+  const errors = [];
+
+  // 硬拦截：永远拦截
+  if (file.size === 0) {
+    errors.push({ code: 'EMPTY_FILE', message: '空文件不允许上传' });
+  }
+
+  // 软拦截：仅当 NOT_MIN_MODE=true 时拦截
+  if (!ALLOWED_EXTENSIONS.includes(extname(file.name))) {
+    if (process.env.STRICT_UPLOAD_MODE !== 'false') {
+      errors.push({ code: 'INVALID_FILE_TYPE', ... });
+    } else {
+      console.warn(`[SOFT-BLOCK] Invalid file type: ${file.name}`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+```
+
+**灰度发布流程：**
+1. 第一天：`STRICT_UPLOAD_MODE=false`，只打日志，不拦截
+2. 观察日志，确认没有合法文件被误拦
+3. 第二天：`STRICT_UPLOAD_MODE=true`，正式启用拦截
+
+---
+
+### 4.3 回滚优先级
+
+| 场景 | 回滚策略 | 恢复时间 |
+|------|----------|----------|
+| Upload 验证误拦合法文件 | 1. 改环境变量 `STRICT_UPLOAD_MODE=false`<br>2. 或 `git revert` 对应 commit | < 5 分钟（环境变量）<br>~15 分钟（revert） |
+| Documents NaN 修复引入新 bug | `git revert` 对应 commit | ~15 分钟 |
+| Chat-turn 条件简化导致行为变更 | `git revert` + 补 test case | ~30 分钟 |
+| Dedup 导致 import 错误 | `git revert` + 检查 `pnpm typecheck` | ~15 分钟 |
+
+---
+
+## 5. 前端配合改动
+
+### 5.1 Upload 验证加固后的前端适配
+
+**后端验证是"必须"，前端验证是"体验优化"。**
+
+后端完成 Upload Boundary 加固后，前端需要配合：
+
+| 组件 | 位置 | 需要加的验证 |
+|------|------|--------------|
+| `app/qa/components/` 上传组件 | 文件选择后立即校验 | 文件类型、大小（跟后端常量一致） |
+| `app/admin/components/` 上传组件 | 同上 | 同上 |
+
+**前端验证实现建议：**
+```typescript
+// app/qa/components/FileUploadButton.tsx
+
+const ALLOWED_EXTENSIONS = ['.pdf', '.md', '.txt', '.csv', '.xlsx'];
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
+function validateFileBeforeUpload(file: File): string | null {
+  const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    return `不支持的文件类型：${ext}，仅支持 ${ALLOWED_EXTENSIONS.join(', ')}`;
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return `文件大小超过 ${MAX_UPLOAD_BYTES / 1024 / 1024}MB 限制`;
+  }
+  return null;
+}
+
+// 在文件选择回调中调用
+const handleFileSelect = (file: File) => {
+  const error = validateFileBeforeUpload(file);
+  if (error) {
+    toast.error(error);
+    return;
+  }
+  // 继续上传...
+};
+```
+
+**注意：** 前端常量（白名单、大小限制）应该跟后端保持一致。如果后端通过环境变量配置，前端也应该在构建时注入同名环境变量（如 `NEXT_PUBLIC_ALLOWED_EXTENSIONS`）。
+
+---
+
+### 5.2 Documents API NaN 修复后的前端适配
+
+**不需要前端改动。**
+
+修复后，`page=abc` 会自动回退到 `1`，前端不需要做任何适配。但建议前端在发送请求前也做参数校验：
+
+```typescript
+// app/admin/components/DocTable.tsx 或类似组件
+
+function fetchDocuments(page: number, pageSize: number) {
+  // 防御性：确保 page/pageSize 是数字
+  const safePage = Number.isNaN(Number(page)) ? 1 : page;
+  const safePageSize = Number.isNaN(Number(pageSize)) ? 20 : pageSize;
+  
+  return fetch(`/api/documents?page=${safePage}&pageSize=${safePageSize}`);
+}
+```
+
+---
+
+### 5.3 Conversation Identity 风险标注后的前端适配
+
+**不需要前端改动。**
+
+这只是注释标注，不影响 API 行为。但建议在 `app/qa/components/conversation-identity.ts` 中加一个 MVP 警告（仅本地开发环境显示）：
+
+```typescript
+// app/qa/components/conversation-identity.ts
+
+export function generateConversationId(): string {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(
+      '[MVP] Conversation ID generated client-side. ' +
+      'Production deployment requires server-side ownership validation.'
+    );
+  }
+  return crypto.randomUUID();
+}
+```
+
+---
+
+## 6. TDD 跳过条件
+
+### 必须先写测试的情况
+
+| 改动类型 | 原因 | 示例 |
+|---------|------|------|
+| 新增验证逻辑 | 验证规则是"行为契约"，必须先定义失败 case | Upload Boundary |
+| 修改参数解析逻辑 | 边缘 case 多，容易引入回归 | Documents NaN |
+| 修改条件分支 | 条件简化可能改变行为，需要 test 覆盖 | Chat-turn Simplify |
+
+**流程：**
+```
+写测试（RED）→ 确认测试失败 → 改代码（GREEN）→ 跑测试 → 重构（REFACTOR）
+```
+
+---
+
+### 可以跳过先写测试的情况
+
+| 改动类型 | 原因 | 示例 |
+|---------|------|------|
+| 纯注释改动 | 不改变行为，测试无法覆盖注释 | Conversation Documentation |
+| 重构性改动但有现有测试覆盖 | 现有测试可以捕捉回归 | Dedup（如果 `getErrorMessage` 已有 test） |
+| 提取纯函数（无副作用） | 纯函数易于手动验证 | 提取 `parsePaginationParams` |
+
+**但需要注意：**
+- 即使跳过"先写测试"，改完后仍须跑**相关模块的现有测试**，确认无回归
+- 如果是重构（如 Dedup），改完后必须跑 `pnpm typecheck`，确保 import 路径正确
+
+---
+
+### 不允许跳过测试的情况
+
+❌ **以下情况绝对不能跳过测试：**
+1. 涉及安全边界的改动（如 Upload Validation）
+2. 涉及数据正确性的改动（如 Documents NaN）
+3. 涉及条件分支/状态机的改动（如 Chat-turn Simplify）
+
+---
+
+## 7. 最终验收清单
+
+所有任务完成后，运行以下命令确认无回归：
+
+```powershell
+cd J:\tax\caishui-webapp
+
+# 1. 全量测试
+pnpm test
+
+# 2. TypeScript 类型检查
+pnpm typecheck
+
+# 3. 构建检查（如果改动影响前端组件）
+pnpm build
+
+# 4. 专注测试（如果只改了后端）
+pnpm vitest run app/api/**/*.test.ts lib/**/*.test.ts
+
+# 5. 发布就绪检查（如果项目有此 script）
+pnpm release:readiness
+```
+
+---
+
+## 8. 风险追踪矩阵
+
+| 风险 | 影响 | 缓解措施 | 负责人 |
+|------|------|----------|--------|
+| Upload 验证误拦合法文件 | 用户无法上传合法文档 | 环境变量可覆盖 + 灰度发布（日志模式） | TBD |
+| Documents NaN 修复引入新 bug | 分页查询失败 | 先写测试 + 手动验证边缘 case | TBD |
+| Chat-turn 条件简化改变行为 | 答案生成逻辑错误 | 改前补 focused test + 跑全量 test | TBD |
+| Dedup 导致 import 错误 | 构建失败 | 跑 `pnpm typecheck` + 全量 test | TBD |
+| 前端常量跟后端不一致 | 用户体验不一致（前端允许但后端拦截） | 构建时注入同名环境变量 | TBD |
+
+---
+
+## 9. 时间估算（参考）
+
+| 任务 | 预计时间 | 说明 |
+|------|----------|------|
+| 1. Upload Boundary | 2-3h | 写 test + 实现 + manual test |
+| 2. Documents NaN | 1h | 改代码 + 补 test |
+| 3. Conversation Docs | 30min | 只加注释 |
+| 4. Chat-turn Simplify | 1-1.5h | 补 test + 改代码 + 回归测试 |
+| 5. Dedup | 1-2h | 提取 + 改 import + 跑全量 test |
+| **总计** | **5.5-8h** | 可拆分到多个 session 完成 |
+
+---
+
+## 10. 参考资料
+
+- [TDD 修补计划（主文档）](./CODE_REVIEW_MODIFICATION_PLAN.md)
+- [代码审查标准](./CODE_REVIEW_STANDARDS.md)
+- [代码审查报告](./CODE_REVIEW_REPORT.md)
+- [AGENTS.md](../AGENTS.md) — 项目约定与上线前 Blocker 列表
+
+---
+
+> **最后建议：** 动工前，先把本文档和主计划文档一起发给团队（如果有），确保大家对优先级、验收标准、回退策略有共识。避免改完才发现"哦这个值写死了，应急时改不了"。

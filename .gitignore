@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.venv/
+
+# Builds and caches
+.next/
+out/
+dist/
+build/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+.preview-snapshots/
+
+# Logs and temp
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Local storage
+_storage/
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Local agent/tool state
+.claude/
+.workbuddy/
+AGENTS.md.backup
+
+# Nested repo internals are handled by git as embedded repositories/submodules

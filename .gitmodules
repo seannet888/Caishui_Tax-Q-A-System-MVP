@@ -1,0 +1,3 @@
+[submodule "data-pipeline"]
+	path = data-pipeline
+	url = https://github.com/seannet888/caishui-data-pipeline.git
