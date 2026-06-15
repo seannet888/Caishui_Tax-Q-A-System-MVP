@@ -540,7 +540,7 @@ type ChatTurnResult =
 - 必须显式传入 `confirm=true`。
 - 硬删除原因不能为空。
 - 删除前查询该 Source Document 产生的 `KnowledgeChunk.id`，若存在任何历史 `AnswerCitation` 引用则拒绝，错误码为 `source_has_historical_citations`。
-- 通过前置条件后，在同一事务中先写入 `AuditEvent(action="hard_deleted")`，记录操作者、原因、来源旧状态与 chunk 数量；随后删除该来源产生的 chunks，再删除 `SourceDocument`。审计必须发生在破坏性删除之前，避免删除失败或事务重排导致无法追溯。
+- 通过前置条件后，在同一事务中先写入 `AuditEvent(action="hard_deleted")`，记录操作者、原因、来源旧状态与 chunk 数量；随后删除该来源产生的 chunks，并清理 Prisma-owned 手工 SQL 表中的依赖行（当前为 `ingest_tasks.document_id`），最后删除 `SourceDocument`。审计必须发生在破坏性删除之前，依赖行必须在 `source_documents` 删除之前清理，避免 `ON DELETE RESTRICT` 外键错误被折成 `unknown_domain_error`。
 
 管理端文档生命周期 UI 已拆到 `app/docs/components/DocumentLifecycleActions.tsx`：
 

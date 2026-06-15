@@ -21,6 +21,7 @@ const { tx, transaction } = vi.hoisted(() => {
     auditEvent: {
       create: vi.fn(async () => undefined),
     },
+    $executeRaw: vi.fn(async () => 1),
   };
   return {
     tx,
@@ -71,6 +72,7 @@ describe("hardDeleteSourceWithAudit", () => {
     expect(tx.knowledgeChunk.deleteMany).not.toHaveBeenCalled();
     expect(tx.sourceDocument.delete).not.toHaveBeenCalled();
     expect(tx.auditEvent.create).not.toHaveBeenCalled();
+    expect(tx.$executeRaw).not.toHaveBeenCalled();
   });
 
   it("非 admin 角色不能硬删除来源，且不启动事务", async () => {
@@ -126,6 +128,7 @@ describe("hardDeleteSourceWithAudit", () => {
     expect(tx.knowledgeChunk.deleteMany).toHaveBeenCalledWith({
       where: { document_id: "doc-1" },
     });
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
     expect(tx.sourceDocument.delete).toHaveBeenCalledWith({
       where: { id: "doc-1" },
     });
@@ -150,9 +153,12 @@ describe("hardDeleteSourceWithAudit", () => {
     const auditOrder = tx.auditEvent.create.mock.invocationCallOrder[0]!;
     const chunkDeleteOrder = tx.knowledgeChunk.deleteMany.mock
       .invocationCallOrder[0]!;
+    const taskDeleteOrder = tx.$executeRaw.mock.invocationCallOrder[0]!;
     const sourceDeleteOrder = tx.sourceDocument.delete.mock
       .invocationCallOrder[0]!;
     expect(auditOrder).toBeLessThan(chunkDeleteOrder);
+    expect(auditOrder).toBeLessThan(taskDeleteOrder);
+    expect(taskDeleteOrder).toBeLessThan(sourceDeleteOrder);
     expect(auditOrder).toBeLessThan(sourceDeleteOrder);
   });
 });

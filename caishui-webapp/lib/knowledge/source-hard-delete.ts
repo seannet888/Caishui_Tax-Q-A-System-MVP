@@ -50,6 +50,10 @@ export async function hardDeleteSourceWithAudit(
     await tx.knowledgeChunk.deleteMany({
       where: { document_id: documentId },
     });
+    await tx.$executeRaw`
+      DELETE FROM ingest_tasks
+      WHERE document_id = ${documentId}
+    `;
     await tx.sourceDocument.delete({
       where: { id: documentId },
     });

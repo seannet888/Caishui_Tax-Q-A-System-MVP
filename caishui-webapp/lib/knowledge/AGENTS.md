@@ -16,7 +16,7 @@ Local rules for the knowledge Module: chat turns, retrieval, evidence, answers, 
 - `upload-validation.ts` owns shared SourceDocument upload/preview `File` metadata validation: supported extensions, empty-file rejection, size limit, and safe filename checks. Upload and preview route Adapters must call it before reading bytes or calling pipeline/ingestion Modules.
 - `source-ingestion.ts` owns Source Document upload preparation and ingest failure compensation.
 - `source-withdrawal.ts` owns source withdrawal/restoration, chunk retrieval status changes, CitationAnnotation creation/resolution, and AuditEvent creation.
-- `source-hard-delete.ts` owns the exceptional hard-delete path. After all preconditions pass, it must write the `hard_deleted` audit record before deleting chunks/source rows in the same transaction.
+- `source-hard-delete.ts` owns the exceptional hard-delete path. After all preconditions pass, it must write the `hard_deleted` audit record before deleting dependent rows and the source in the same transaction. This includes Prisma models and Prisma-owned manual SQL tables such as `ingest_tasks`; do not delete `source_documents` while `ingest_tasks.document_id` still references it.
 - `chunk-review.ts` owns human verification/rejection and embedding-trigger handoff.
 - `document-review-read-model.ts` owns document lifecycle and chunk retrieval-readiness projection for review pages.
 - `preview-persistence.ts` owns MVP preview snapshots behind `PreviewSnapshotStore`, `savePreviewSnapshot`, and `loadPreviewSnapshot`. The default store is local file-backed under `PREVIEW_SNAPSHOT_DIR` or `.preview-snapshots/`; keep that directory ignored and do not reintroduce process-only preview state.

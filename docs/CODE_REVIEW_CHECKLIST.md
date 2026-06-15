@@ -60,6 +60,7 @@
 ### 来源生命周期
 - [ ] 撤出/恢复操作在同一事务中更新 Document + Chunk，并追加 CitationAnnotation
 - [ ] 硬删除前检查历史 AnswerCitation 引用，有引用则拒绝
+- [ ] 硬删除在删除 SourceDocument 前清理所有同源依赖行，包括 Prisma-owned 手工 SQL 表 `ingest_tasks`
 - [ ] AuditEvent 与业务状态在同一事务提交
 
 ### Embedding 生命周期（Python）
