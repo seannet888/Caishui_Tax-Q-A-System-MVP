@@ -342,13 +342,20 @@ class Embedder:
 
 ### 4.2 分块策略（不变，条款正则 + 表格整体）
 
+`data-pipeline/transformers/chunker.py` 必须在调用 embedding lifecycle 之前保证普通文本 chunk 满足 provider-safe 上限：
+
+- 默认参数：目标约 512 字符，最大 `MAX_CHUNK_TOKENS = 1024` 字符，最小 50 字符，重叠 50 字符。
+- 优先按标题、条款边界、句号/分号切分；当来源文本缺少标点或条款边界时，必须按最大长度硬切，不能产出超长普通文本 chunk。
+- 短标题、短条款或短段落累计到 `pending` 时必须按目标长度及时 flush，并在合并到正文前再次检查最大长度；不得因 pending 累积或合并导致 chunk 超过 `MAX_CHUNK_TOKENS`。
+- `400 invalid parameter` 等由超长 input 触发的 embedding provider 错误应视为 pipeline 分块缺陷，而不是可接受的生产失败状态。
+
 ### 4.3 元数据抽取（不变，纯正则 + 来源配置）
 
 ### 4.4 写入与验证（chunk 级）
 
-- 所有新入库 chunk 初始 `verification_status = 'unverified'`，`embedding = null`。
-- **Seed-Verified**：仅针对 MVP 初始 3‑5 份官方法规，通过脚本标记，逐 chunk 校验结构后设为 `verified`。
-- **Human-Verified**：后台 reviewer 手动标记，填写核验依据。
+- 所有新入库 chunk 若未显式走可信来源路径，初始 `verification_status = 'unverified'`，`embedding = null`。
+- **Trusted Source / Seed-Verified（默认 admin 上传 UX）**：管理员上传官方可信来源时，表单默认勾选“可信来源自动核验”，通过显式 `seedVerified=true` 传入 pipeline；pipeline 仍按 chunk 级处理，将结构合规的 chunk 标记为 `verified`、`verification_method = "seed"`，并触发生产 embedding。该路径用于可信官方来源的快速入库，不要求逐条人工审阅。Seed 结构校验只阻断核心质量问题（内容过短、缺来源位置、缺发文机关、缺生效日期等）；无文号文件与 provider-safe 分块造成的句尾疑似截断不得单独阻断可信来源自动核验。
+- **Human-Verified**：后台 reviewer 手动标记，填写核验依据。该路径用于异常 chunk、未勾选可信导入的来源、抽检与补救，不作为可信官方来源的默认必经流程。
 - `rejected` chunk 入库但 `embedding = null`，不参与检索。
 
 ### 4.5 Pipeline Writer / Embedding Lifecycle 模块边界（已落地）
@@ -373,7 +380,7 @@ async def apply_embedding_lifecycle(chunk, embedder, repo) -> None:
 
 ### 4.6 Verified Chunk Embedding Trigger / Job（已落地）
 
-Human-Verified 后需要为单个 chunk 触发生产 embedding，但该路径不得复制 writer 中的向量化逻辑。当前实现分成两个 Module：
+Human-Verified 后需要为单个 chunk 触发生产 embedding，但该路径不得复制 writer 中的向量化逻辑。Trusted Source / Seed-Verified 上传则在 ingestion 中通过同一 `output/embedding_lifecycle.py` 自动进入 embedding。当前实现分成两个 Module：
 
 - WebApp：`lib/pipeline/embedding-trigger.ts` 只负责向 data-pipeline 的 `POST /chunks/{chunk_id}/embed` 发起已签名请求，并返回 `{ ok, status, error? }`。
 - Pipeline：`embedding_job.py::embed_verified_chunk(...)` 负责读取指定 Knowledge Chunk，校验其仍满足 `verified + RETRIEVABLE + is_current_version`，然后委托 `output/embedding_lifecycle.py::apply_embedding_lifecycle(...)`。
@@ -382,7 +389,7 @@ Human-Verified 后需要为单个 chunk 触发生产 embedding，但该路径不
 **必须遵守**：
 
 - `embedding_job.py` 是 `output/embedding_lifecycle.py` 的调用者，不是第二套向量生命周期实现。
-- Human Verify 的数据库事务先完成；embedding trigger 失败不得回滚已完成的人工核验，应把失败状态返回给前端/审计链用于后续重试。
+- Human Verify 的数据库事务先完成；embedding trigger 失败不得回滚已完成的人工核验，应把失败状态返回给前端/审计链用于后续重试。Seed-Verified 路径中的 embedding 失败同样不得改变 `verification_status`，文档详情页应将其呈现为可重试的 readiness 问题。
 - `app/docs/components/chunk-review-response-presenter.ts` 必须将“核验已保存但 embedding trigger 失败”投影为管理员 warning，避免 verified chunk 因未排上向量化任务而静默停留在不可检索状态。
 - `app/api/chunks/[chunkId]/embed/route.ts` 提供手动 retry embedding trigger；该 route 只允许 `reviewer` 调用，只触发 `embedding-trigger.ts`，不得重新执行 human verification 或修改 verification 状态。文档详情页通过 `ChunkEmbeddingRetryAction.tsx` 对 blocked chunk 暴露该动作。
 - WebApp → data-pipeline 的签名、URL、错误处理应收敛到 `lib/pipeline/*` Adapter；新增 pipeline 调用不得在 route 中重复拼装 HMAC headers。
@@ -547,6 +554,7 @@ type ChatTurnResult =
 - 文档详情页展示撤出检索、恢复检索与受限硬删除入口。
 - 撤出、恢复、硬删除都必须填写原因；硬删除额外要求勾选二次确认。
 - 浏览器侧 POST/DELETE 调用与错误码映射由 `document-lifecycle-client.ts` 负责。
+- 受限硬删除成功后，当前 `/docs/{docId}` 资源已不存在；UI 必须导航回文档列表（`/docs`）或其他稳定页面，不得仅刷新当前详情页并把预期 404 暴露给用户。
 - UI 不直接调用 Prisma，也不绕过 `POST|DELETE /api/documents/[docId]` 与对应领域模块。
 - 文档详情页的生命周期与 chunk readiness 展示由 `app/docs/components/document-review-presenter.ts` 投影。页面只消费 title、tone、action hint、readiness label/message，不在 JSX 中重复编码状态展示规则。
 

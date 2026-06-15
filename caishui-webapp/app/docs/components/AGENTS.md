@@ -23,5 +23,6 @@ Local rules for document and chunk review UI Modules.
 
 - Withdraw/restore are normal admin actions.
 - Hard delete is exceptional, must require explicit confirmation and reason, and must surface blocked preconditions clearly.
+- Successful hard delete removes the current detail resource. The UI must navigate away from `/docs/{documentId}` (normally back to `/docs`) instead of refreshing or leaving the user on an expected 404.
 - Permission failures from lifecycle routes should appear as forbidden/role failures, not generic validation errors.
 - Lifecycle UI must consume structured `{ error, detail?, documentId? }` responses. Do not parse raw thrown strings or expose backend stack/provider details.

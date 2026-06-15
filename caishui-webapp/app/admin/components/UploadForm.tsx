@@ -153,9 +153,15 @@ export function UploadForm() {
               type="checkbox"
               name="seedVerified"
               value="true"
+              defaultChecked
               className="h-4 w-4 rounded border-[color:var(--cs-border)] accent-[color:var(--cs-primary)]"
             />
-            加入 MVP Seed Corpus
+            <span>
+              可信来源自动核验
+              <span className="ml-2 text-xs text-[color:var(--cs-muted)]">
+                通过结构检查后自动标记为已核验并触发向量化
+              </span>
+            </span>
           </label>
           <div className="flex flex-wrap gap-2">
             <Button

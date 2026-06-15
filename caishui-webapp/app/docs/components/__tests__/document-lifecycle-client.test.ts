@@ -85,4 +85,23 @@ describe("submitDocumentLifecycleAction", () => {
       }),
     });
   });
+
+  it("硬删除成功后要求离开已删除的文档详情页", async () => {
+    const fetcher = vi.fn(async () =>
+      Response.json({ ok: true }, { status: 200 }),
+    );
+
+    await expect(
+      submitDocumentLifecycleAction({
+        documentId: "doc-1",
+        action: "hardDelete",
+        reason: "误上传测试文件",
+        fetcher,
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      message: "已硬删除来源。",
+      nextNavigation: { kind: "redirect", href: "/docs" },
+    });
+  });
 });

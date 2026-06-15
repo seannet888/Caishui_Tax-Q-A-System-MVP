@@ -59,7 +59,11 @@ export function DocumentLifecycleActions({
       if (result.ok) {
         setReason("");
         setConfirmHardDelete(false);
-        router.refresh();
+        if (result.nextNavigation?.kind === "redirect") {
+          router.replace(result.nextNavigation.href);
+        } else {
+          router.refresh();
+        }
       }
     } catch (err) {
       setFeedback({ kind: "error", message: String(err) });

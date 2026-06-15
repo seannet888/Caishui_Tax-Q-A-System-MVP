@@ -31,11 +31,11 @@
 3. **可信溯源**：每个答案生成时固化"答案生成记录"和不可变的"引用快照"，即使来源后续被撤出或修改，历史答案仍显示当时引用的原文。
 4. **诚实的不确定性**：区分"未检索到"与"未出台"；在证据不足时给出确定性模板而非编造，并展示本次检索实际覆盖了哪些来源、时间范围。
 5. **地域感知**：识别用户问题中的管辖地，分组排序本地与全国材料；命中地方敏感关键词而用户未指定地区时主动询问。
-6. **文档管理与清洗后台**：管理员上传 PDF/Markdown/Excel/CSV，触发异步清洗（解析 → 财税语义分块 → 元数据抽取 → 核验 → 为已核验 chunk 生成向量入库），可查看清洗进度与 chunk 分布。
-7. **核验与来源治理**：reviewer 对 chunk 做人工核验；admin 管理 seed 语料、撤出/恢复来源、在严格前置条件下硬删除。所有关键动作写入只追加的审计事件。
+6. **文档管理与清洗后台**：管理员上传 PDF/Markdown/Excel/CSV，触发异步清洗（解析 → 财税语义分块 → 元数据抽取 → 可信来源自动核验或人工核验 → 为已核验 chunk 生成向量入库），可查看清洗进度与 chunk 分布。
+7. **核验与来源治理**：admin 上传官方可信来源时默认走 Seed-Verified 自动核验并触发向量化；reviewer 的逐 chunk 人工核验用于异常处理、抽检、补救和未勾选可信导入的材料。admin 管理 seed 语料、撤出/恢复来源、在严格前置条件下硬删除。所有关键动作写入只追加的审计事件。
 
 > MVP 完成判定（端到端闭环）：
-> 官方 Source Document → 解析与 chunk 级 Seed/Human 核验 → verified chunk 生成生产向量 → Effective Applicability + 管辖地 + Authority Rank 检索 → Evidence Sufficiency 门控 → 流式生成 → Citation Grounding Check → Answer Generation Record + Citation Snapshot + Audit Event。
+> 官方 Source Document → 解析与 chunk 级 Trusted Source/Seed 或 Human 核验 → verified chunk 生成生产向量 → Effective Applicability + 管辖地 + Authority Rank 检索 → Evidence Sufficiency 门控 → 流式生成 → Citation Grounding Check → Answer Generation Record + Citation Snapshot + Audit Event。
 
 ---
 
@@ -113,8 +113,8 @@
 
 ### 核验（reviewer / admin）
 
-47. 作为审核员，我想对自动规则无法确认的 chunk 做人工核验（Human-Verified），并记录审核人、时间、补齐字段和官方依据。
-48. 作为管理员，我想把 MVP 初始验收集中的少量官方材料以 Seed-Verified 方式逐 chunk 标记入库，而不是整份文件一键 verified。
+47. 作为管理员，我希望官方可信来源上传时默认启用“可信来源自动核验”，系统按 chunk 级 Seed-Verified 路径标记结构合规的 chunk，并自动触发 embedding，使常规官方文件不必逐条人工审阅。
+48. 作为审核员，我想对自动规则无法确认、embedding 失败、解析异常、抽检命中或未勾选可信导入的 chunk 做人工核验（Human-Verified），并记录审核人、时间、补齐字段和官方依据。
 49. 作为系统，我需要拒绝（rejected）结构不合格的 chunk（空内容、表格损坏、缺权威标识等），记录可操作的拒绝原因，且不为其生成向量。
 50. 作为合规负责人，我希望 MVP 上线前 `verification_method = 'auto'` 和 `verification_status = 'disputed'` 的记录数都为 0，因为这两者是未来预留、MVP 不产出。
 51. 作为审核员，我不希望存在任何"强制覆盖"（manual_override）入口绕过核验规则。
@@ -296,7 +296,7 @@
 
 **产品与权限**
 - 不实现多租户、组织隔离、复杂 ABAC/RBAC（仅 viewer/reviewer/admin 可组合基础角色）。
-- 不把"管理员上传/处理完成/seed 成员"宣传为自动可信；不把"未检索到"宣传为"不存在/未出台"；不把官方解读/地方口径/案例宣传为高于规范性原文的法律依据。
+- 不把任意"管理员上传/处理完成"宣传为可信；只有显式可信来源自动核验（Seed-Verified）或 Human-Verified 且通过 chunk 级记录的内容才可进入默认检索。不把"未检索到"宣传为"不存在/未出台"；不把官方解读/地方口径/案例宣传为高于规范性原文的法律依据。
 
 ---
 

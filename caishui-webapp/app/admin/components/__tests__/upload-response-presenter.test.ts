@@ -21,8 +21,21 @@ describe("presentUploadFailure", () => {
         error: "source_document_already_exists",
       }),
     ).toEqual({
-      message: "source_document_already_exists",
+      message: "该来源文件已存在，请查看已有文档或更换来源渠道。",
       failedDocumentId: null,
+    });
+  });
+
+  it("shows duplicate-source conflicts as an existing document link instead of an id error", () => {
+    expect(
+      presentUploadFailure({
+        error: "source_document_already_exists",
+        detail: "doc-existing",
+        documentId: "doc-existing",
+      }),
+    ).toEqual({
+      message: "该来源文件已存在，请查看已有文档或更换来源渠道。",
+      failedDocumentId: "doc-existing",
     });
   });
 });

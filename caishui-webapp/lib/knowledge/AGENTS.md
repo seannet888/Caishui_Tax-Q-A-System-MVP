@@ -72,6 +72,8 @@ Temporal intent is not year matching. A past year may be a document number or co
 
 ## Verification and Readiness
 
+- Trusted official-source uploads may use the explicit seed verification path (`seedVerified=true`) to mark structurally valid chunks as `verified` during ingestion and trigger embedding. This is the default admin upload UX.
+- Per-chunk human review is an exception/spot-check workflow, not a required step for every trusted official import.
 - Human verification may succeed while embedding trigger fails. Persist verification and surface embedding trigger failure as a warning.
 - Verified chunks are retrieval-ready only when embedding is `COMPLETED` and retrieval status is `RETRIEVABLE`.
 - `canRetryEmbedding` is true only for verified/retrievable chunks whose embedding is not completed.

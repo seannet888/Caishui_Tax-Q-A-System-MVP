@@ -5,6 +5,7 @@ export type DocumentLifecycleAction = "withdraw" | "restore" | "hardDelete";
 export interface DocumentLifecycleResult {
   ok: boolean;
   message: string;
+  nextNavigation?: { kind: "redirect"; href: string };
 }
 
 export async function submitDocumentLifecycleAction({
@@ -38,6 +39,9 @@ export async function submitDocumentLifecycleAction({
   return {
     ok: true,
     message: successMessage(action),
+    ...(action === "hardDelete"
+      ? { nextNavigation: { kind: "redirect" as const, href: "/docs" } }
+      : {}),
   };
 }
 
