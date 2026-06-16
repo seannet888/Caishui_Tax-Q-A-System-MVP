@@ -29,6 +29,17 @@ export function evaluateEvidencePolicy(input: {
   jurisdiction?: string;
   chunks?: RetrievedEvidence[];
 }): EvidencePolicyDecision {
+  if (!input.chunks && isNonTaxLaborLawQuery(input.query)) {
+    return {
+      action: "no_evidence",
+      assessment: {
+        state: "NO_EVIDENCE",
+        score: 0,
+        reasons: ["non_tax_query_out_of_scope"],
+      },
+    };
+  }
+
   if (!input.jurisdiction && hasLocalSensitiveKeyword(input.query)) {
     return {
       action: "clarify",
@@ -75,6 +86,18 @@ export function evaluateEvidencePolicy(input: {
     return { action: "no_evidence", assessment };
   }
   return { action: "generate", assessment, promptDirectives: [] };
+}
+
+function isNonTaxLaborLawQuery(query: string): boolean {
+  const asksLaborContract =
+    /劳动者|用人单位|劳动合同|解除合同|解除劳动关系|辞退|开除/.test(query);
+  if (!asksLaborContract) return false;
+
+  const hasTaxOrFinanceScope =
+    /税|个税|个人所得税|社保|公积金|补偿金|赔偿金|工资薪金|扣除|发票|增值税|企业所得税/.test(
+      query,
+    );
+  return !hasTaxOrFinanceScope;
 }
 
 function limited(

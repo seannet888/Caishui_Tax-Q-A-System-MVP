@@ -39,6 +39,21 @@ describe("evaluateEvidencePolicy", () => {
     });
   });
 
+  it("非财税劳动合同问题在检索前返回无证据", () => {
+    const decision = evaluateEvidencePolicy({
+      query: "劳动者发生什么情况，用人单位可解除合同？",
+    });
+
+    expect(decision).toEqual({
+      action: "no_evidence",
+      assessment: {
+        state: "NO_EVIDENCE",
+        score: 0,
+        reasons: ["non_tax_query_out_of_scope"],
+      },
+    });
+  });
+
   it("仅有授权性条款时不得判定为充分政策证据", () => {
     const decision = evaluateEvidencePolicy({
       query: "研发费用加计扣除的具体办法是什么？",

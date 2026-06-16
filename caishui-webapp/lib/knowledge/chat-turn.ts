@@ -141,6 +141,22 @@ export async function planChatTurn(
       },
     };
   }
+  if (preflight.action === "no_evidence") {
+    await persistDeterministicTurn(dependencies, request, {
+      retrievalQuery: standalone.query,
+      contextSnapshot: standalone.contextSnapshot,
+      answerText: NO_EVIDENCE_TEMPLATE,
+      reason: "no_evidence",
+      coverageEvidence: generateRetrievalCoverageEvidence([]),
+    });
+    return {
+      kind: "deterministic",
+      event: {
+        type: "no_evidence",
+        message: NO_EVIDENCE_TEMPLATE,
+      },
+    };
+  }
 
   let retrieval: RetrievalResult;
   try {

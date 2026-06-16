@@ -39,9 +39,15 @@ Do not remove these gates to improve recall.
 
 Temporal intent is not year matching. A past year may be a document number or comparison. Use `detectTemporalIntent` and parameterized `Prisma.Sql`, never string-concatenated raw SQL.
 
+## Standalone Query Context
+
+- Follow-up questions that replace an amount (for example "那如果是200万那？") must preserve the prior tax topic while carrying the current amount into `retrieval_query`. If the prior question stated an explicit加计比例, update the derived加计金额 as well (for example 200万元 × 75% = 150万元).
+- Do not let a standalone query silently retain stale numeric assumptions from the previous turn; stale amounts cause model answers to discuss the wrong scenario.
+
 ## Evidence and Failure Semantics
 
 - `NO_EVIDENCE` means no verified/retrievable evidence was found after a successful search. Return deterministic text and do not call the model.
+- Non-tax labor-law questions, such as pure employment contract termination conditions, must be stopped by Evidence Policy before retrieval unless the query explicitly asks about tax/finance treatment (for example individual income tax, severance compensation tax, social security, or payroll withholding). Do not let an off-domain labor query retrieve contaminated tax-corpus chunks and fail later in citation grounding.
 - Retrieval provider failure is not `NO_EVIDENCE`. If query embedding or retrieval readiness fails, persist a FAILED Answer and emit only the safe user event `retrieval_unavailable`.
 - `LIMITED_EVIDENCE` may call the model only with constrained wording.
 - `SUFFICIENT_EVIDENCE` may proceed normally, then must pass Citation Grounding before completion.

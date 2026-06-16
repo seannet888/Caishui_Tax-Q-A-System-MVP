@@ -189,6 +189,67 @@ describe("planChatTurn", () => {
     ]);
   });
 
+  it("does not retrieve or generate for non-tax labor contract questions", async () => {
+    const calls: string[] = [];
+
+    const result = await planChatTurn(
+      {
+        conversationId: "conversation-1",
+        question: "劳动者发生什么情况，用人单位可解除合同？",
+        history: [],
+      },
+      {
+        resolveHistory: async () => [],
+        generateStandaloneQuery: () => ({
+          status: "ready",
+          query: "劳动者发生什么情况，用人单位可解除合同？",
+          contextSnapshot: [],
+        }),
+        evaluateEvidencePolicy: (input) => {
+          calls.push("evaluateEvidencePolicy");
+          expect(input).toEqual({
+            query: "劳动者发生什么情况，用人单位可解除合同？",
+            jurisdiction: undefined,
+          });
+          return {
+            action: "no_evidence",
+            assessment: {
+              state: "NO_EVIDENCE",
+              score: 0,
+              reasons: ["non_tax_query_out_of_scope"],
+            },
+          };
+        },
+        retrieve: async () => {
+          throw new Error("retrieval should not run for non-tax questions");
+        },
+        persistDeterministicAnswer: async (_store, input) => {
+          calls.push("persistDeterministicAnswer");
+          expect(input).toMatchObject({
+            conversationId: "conversation-1",
+            originalQuestion: "劳动者发生什么情况，用人单位可解除合同？",
+            retrievalQuery: "劳动者发生什么情况，用人单位可解除合同？",
+            answerText: NO_EVIDENCE_TEMPLATE,
+            reason: "no_evidence",
+          });
+          return { id: "answer-out-of-scope" };
+        },
+      },
+    );
+
+    expect(result).toEqual({
+      kind: "deterministic",
+      event: {
+        type: "no_evidence",
+        message: NO_EVIDENCE_TEMPLATE,
+      },
+    });
+    expect(calls).toEqual([
+      "evaluateEvidencePolicy",
+      "persistDeterministicAnswer",
+    ]);
+  });
+
   it("persists a failed answer and returns a user-facing error when retrieval is unavailable", async () => {
     const calls: string[] = [];
 

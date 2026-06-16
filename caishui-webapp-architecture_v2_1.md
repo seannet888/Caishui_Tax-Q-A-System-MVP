@@ -340,21 +340,21 @@ class Embedder:
         return vector
 ```
 
-### 4.2 分块策略（不变，条款正则 + 表格整体）
+### 4.2 分块策略（条款正则 + 表格整体 + provider-safe 上限）
 
 `data-pipeline/transformers/chunker.py` 必须在调用 embedding lifecycle 之前保证普通文本 chunk 满足 provider-safe 上限：
 
-- 默认参数：目标约 512 字符，最大 `MAX_CHUNK_TOKENS = 1024` 字符，最小 50 字符，重叠 50 字符。
+- 默认参数：目标约 360 字符，最大 `MAX_CHUNK_TOKENS = 500` 字符，最小 50 字符，重叠 50 字符。该上限来自 SiliconFlow `BAAI/bge-large-zh-v1.5` 在中文长文本上的真实验收边界；不得仅按“1 字符≈1 token”将上限提高到 1024。
 - 优先按标题、条款边界、句号/分号切分；当来源文本缺少标点或条款边界时，必须按最大长度硬切，不能产出超长普通文本 chunk。
 - 短标题、短条款或短段落累计到 `pending` 时必须按目标长度及时 flush，并在合并到正文前再次检查最大长度；不得因 pending 累积或合并导致 chunk 超过 `MAX_CHUNK_TOKENS`。
-- `400 invalid parameter` 等由超长 input 触发的 embedding provider 错误应视为 pipeline 分块缺陷，而不是可接受的生产失败状态。
+- `400 invalid parameter` / `code=20015` 等由超长或 provider 不接受的 input 触发的 embedding provider 错误应视为 pipeline 分块缺陷，而不是可接受的生产失败状态。
 
 ### 4.3 元数据抽取（不变，纯正则 + 来源配置）
 
 ### 4.4 写入与验证（chunk 级）
 
 - 所有新入库 chunk 若未显式走可信来源路径，初始 `verification_status = 'unverified'`，`embedding = null`。
-- **Trusted Source / Seed-Verified（默认 admin 上传 UX）**：管理员上传官方可信来源时，表单默认勾选“可信来源自动核验”，通过显式 `seedVerified=true` 传入 pipeline；pipeline 仍按 chunk 级处理，将结构合规的 chunk 标记为 `verified`、`verification_method = "seed"`，并触发生产 embedding。该路径用于可信官方来源的快速入库，不要求逐条人工审阅。Seed 结构校验只阻断核心质量问题（内容过短、缺来源位置、缺发文机关、缺生效日期等）；无文号文件与 provider-safe 分块造成的句尾疑似截断不得单独阻断可信来源自动核验。
+- **Trusted Source / Seed-Verified（默认 admin 上传 UX）**：管理员上传官方可信来源时，表单默认勾选“可信来源自动核验”，通过显式 `seedVerified=true` 传入 pipeline；pipeline 仍按 chunk 级处理，将结构合规的 chunk 标记为 `verified`、`verification_method = "seed"`，并触发生产 embedding。该路径用于可信官方来源的快速入库，不要求逐条人工审阅。Seed 结构校验只阻断核心质量问题（内容过短、缺来源位置、缺发文机关、缺生效日期、跨领域污染等）；无文号文件与 provider-safe 分块造成的句尾疑似截断不得单独阻断可信来源自动核验。若税务元数据下出现明显非财税劳动法条文（如劳动合同解除条件），必须保持未核验/进入人工审查，不能进入默认检索。
 - **Human-Verified**：后台 reviewer 手动标记，填写核验依据。该路径用于异常 chunk、未勾选可信导入的来源、抽检与补救，不作为可信官方来源的默认必经流程。
 - `rejected` chunk 入库但 `embedding = null`，不参与检索。
 
@@ -377,6 +377,7 @@ async def apply_embedding_lifecycle(chunk, embedder, repo) -> None:
 - `embedding_identity = SHA256(document_id + content_hash + model + dimension)`，MVP 阶段不引入独立 `EmbeddingRecord` 表。
 - 自动重试最多 3 次；达到上限时 `embedding_status = "FAILED"`，`embedding_error = "automatic_retry_limit_reached"`。
 - Embedding 失败不得改变 `verification_status`。
+- `PipelineOutput.status = "partial_failure"` 不得在 `ingest_tasks` 中持久化为 `SUCCESS`。只要存在 embedding partial failure，任务和 SourceDocument 处理状态应为 `FAILED`，并保留诊断性 `error_message`，避免 UI 与审计链误判为检索就绪。
 
 ### 4.6 Verified Chunk Embedding Trigger / Job（已落地）
 
@@ -462,7 +463,9 @@ type ChatTurnResult =
 
 1. 读取最近对话历史，生成 Standalone Query。
 2. Standalone Query 无法补全时，持久化确定性澄清答案并返回 `needs_clarification` 事件。
+   - 金额替换型追问（如“那如果是200万那？”）必须保留上一轮明确税务主题，同时把当前金额写入 `retrieval_query`；若上一轮包含明确加计比例（如 75%），应同步推算新的加计金额（200万元 × 75% = 150万元），避免沿用上一轮 100万元/75万元的陈旧假设。
 3. 检索前执行 Evidence Policy；地方敏感问题缺管辖地时先澄清，不进入向量检索。
+   - 非财税劳动法问题（例如单纯询问劳动合同解除条件）属于系统范围外，应在 Evidence Policy preflight 阶段确定性返回 `NO_EVIDENCE`，不得进入向量检索或模型生成。若问题明确询问税务/财务处理（如解除劳动合同经济补偿金个税、社保或工资薪金扣缴），则仍可按财税问题处理。
 4. 执行 `retrieve(...)`，获得 `chunks + coverageEvidence + queryPlan`。若 query embedding / retrieval provider 在此阶段失败，必须通过 `lib/knowledge/retrieval-failure-answer.ts` 持久化 `status=FAILED` 的 Answer，并向前端返回 `error:retrieval_unavailable`；不得降级为 `no_evidence`，因为系统并未完成知识库检索。
 5. 检索后再次执行 Evidence Policy：
    - `no_evidence`：持久化确定性答案，返回 `no_evidence` 事件，不调用模型。

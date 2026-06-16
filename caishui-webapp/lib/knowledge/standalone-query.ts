@@ -67,9 +67,37 @@ function composeQuery(parts: {
 }): string {
   const { currentQuestion, topic, jurisdiction, temporalIntent } = parts;
   if (!isContextDependentQuestion(currentQuestion)) return currentQuestion;
+  const amountAdjustedTopic = topic
+    ? applyAmountFollowUp(topic, currentQuestion)
+    : undefined;
   // 仅拼接已明确存在的信息，不臆造新事实。
-  return [jurisdiction, topic, temporalIntent].filter(Boolean).join(" ") ||
+  return [jurisdiction, amountAdjustedTopic, temporalIntent].filter(Boolean).join(" ") ||
     currentQuestion;
+}
+
+function applyAmountFollowUp(topic: string, currentQuestion: string): string {
+  const newAmount = currentQuestion.match(/(\d+(?:\.\d+)?)\s*万/)?.[1];
+  if (!newAmount) return topic;
+
+  const rate = topic.match(/加计\s*(\d+(?:\.\d+)?)\s*%/)?.[1];
+  const amountMatches = [...topic.matchAll(/(\d+(?:\.\d+)?)万元/g)];
+  if (amountMatches.length === 0) return `${topic} ${currentQuestion}`;
+
+  let result = topic.replace(
+    `${amountMatches[0]![1]}万元`,
+    `${newAmount}万元`,
+  );
+  if (rate && amountMatches.length > 1) {
+    const calculated = Number(newAmount) * Number(rate) / 100;
+    const formatted = Number.isInteger(calculated)
+      ? String(calculated)
+      : String(Number(calculated.toFixed(2)));
+    result = result.replace(
+      `${amountMatches[1]![1]}万元`,
+      `${formatted}万元`,
+    );
+  }
+  return result;
 }
 
 function normalizeJurisdiction(name: string, suffix?: string): string {

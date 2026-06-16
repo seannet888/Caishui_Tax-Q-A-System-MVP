@@ -34,6 +34,30 @@ describe("generateStandaloneQuery", () => {
     }
   });
 
+  it("将金额替换追问改写为带当前金额的独立检索查询", () => {
+    const history: ConversationTurn[] = [
+      {
+        role: "user",
+        content:
+          "所得税汇算清缴时高新企业的研发费用加计75%扣除，那账务上要怎么处理？比如研发费用账务上发生的数是100万元，做所得税汇算清缴时申报表里加计了75%，那这75万元在账务上怎么处理？",
+      },
+      {
+        role: "assistant",
+        content:
+          "加计扣除属于税务处理，75万元不需要在账务上做会计分录。",
+      },
+    ];
+
+    const result = generateStandaloneQuery(history, "那如果是200万那？");
+
+    expect(result.status).toBe("ready");
+    if (result.status === "ready") {
+      expect(result.query).toBe(
+        "所得税汇算清缴时高新企业的研发费用加计75%扣除，那账务上要怎么处理？比如研发费用账务上发生的数是200万元，做所得税汇算清缴时申报表里加计了75%，那这150万元在账务上怎么处理",
+      );
+    }
+  });
+
   it("只使用最近五条上下文生成检索查询", () => {
     const history: ConversationTurn[] = [
       { role: "user", content: "企业所得税优惠的最新政策是什么？" },
