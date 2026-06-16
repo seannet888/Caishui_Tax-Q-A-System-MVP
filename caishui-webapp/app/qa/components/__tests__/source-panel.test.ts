@@ -5,6 +5,41 @@ import { SourcePanel } from "../SourcePanel";
 import type { PresentedCitation } from "@/lib/knowledge/citation-presentation";
 
 describe("SourcePanel", () => {
+  it("can render as a compact desktop citation rail without changing inline mobile panels", () => {
+    const citation: PresentedCitation = {
+      id: "citation-rail",
+      chunkId: "chunk-rail",
+      title: "研发费用加计扣除政策",
+      sourceDocumentName: "official-rd-policy.pdf",
+      answeredAt: "2026-06-14T07:00:00.000Z",
+      evidenceExcerpt: "研发费用按照实际发生额在税前加计扣除。",
+      isTruncated: false,
+      includesTable: false,
+      tableTruncated: false,
+      snapshotContentHash: "hash-rail",
+      status: "active",
+      severity: "normal",
+      badges: [],
+      warnings: [],
+    };
+
+    const inlineHtml = renderToStaticMarkup(
+      createElement(SourcePanel, { presentedCitations: [citation] }),
+    );
+    const stickyHtml = renderToStaticMarkup(
+      createElement(SourcePanel, { presentedCitations: [citation], desktopRail: true }),
+    );
+
+    expect(inlineHtml).not.toContain("max-h-[calc(100vh-12rem)]");
+    expect(stickyHtml).not.toContain("sticky");
+    expect(stickyHtml).not.toContain("top-1/2");
+    expect(stickyHtml).not.toContain("self-center");
+    expect(stickyHtml).toContain("w-full");
+    expect(stickyHtml).toContain("max-h-full");
+    expect(stickyHtml).toContain("overflow-y-auto");
+    expect(stickyHtml).toContain("overscroll-contain");
+  });
+
   it("renders citation cards with source identity, audit metadata, and warning badges", () => {
     const html = renderToStaticMarkup(
       createElement(SourcePanel, {

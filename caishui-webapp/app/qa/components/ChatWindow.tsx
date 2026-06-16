@@ -14,8 +14,8 @@ export function ChatWindow() {
     useQaClientSession();
 
   return (
-    <div className="grid min-h-[560px] flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
-      <section className="flex min-h-[560px] flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--cs-border)] bg-white/[0.86] shadow-[var(--cs-shadow-md)]">
+    <div className="grid min-h-[560px] flex-1 gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <section className="flex min-h-[560px] flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--cs-border)] bg-white/[0.86] shadow-[var(--cs-shadow-md)] lg:h-full lg:min-h-0">
         <div className="flex items-center justify-between border-b border-[color:var(--cs-divider)] px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[color:var(--cs-primary)] to-[color:var(--cs-cyan)] text-sm font-bold text-white shadow-[0_4px_10px_rgba(0,119,182,0.24)]">
@@ -59,9 +59,9 @@ export function ChatWindow() {
         </div>
         <QueryInput disabled={busy || !ready} onSend={send} />
       </section>
-      <div className="hidden lg:block">
+      <div className="hidden min-h-0 lg:flex lg:h-full lg:items-start">
         {latestCitations.length > 0 ? (
-          <SourcePanel presentedCitations={latestCitations} />
+          <SourcePanel presentedCitations={latestCitations} desktopRail />
         ) : (
           <EmptyCitationRail />
         )}
@@ -72,7 +72,7 @@ export function ChatWindow() {
 
 function EmptyCitationRail() {
   return (
-    <aside className="space-y-3 rounded-xl border border-[color:var(--cs-border)] bg-white/[0.86] p-3 text-xs text-[color:var(--cs-muted)] shadow-[var(--cs-shadow-sm)]">
+    <aside className="max-h-full w-full space-y-3 overflow-y-auto overscroll-contain rounded-xl border border-[color:var(--cs-border)] bg-white/[0.86] p-3 text-xs text-[color:var(--cs-muted)] shadow-[var(--cs-shadow-sm)]">
       <div className="flex items-center justify-between gap-3 border-b border-[color:var(--cs-divider)] pb-2">
         <div className="flex items-center gap-2 font-semibold text-[color:var(--cs-ink)]">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#e4f3fb] text-[color:var(--cs-primary)]">

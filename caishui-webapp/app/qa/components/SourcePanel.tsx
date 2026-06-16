@@ -10,9 +10,11 @@ import { cn } from "@/lib/utils/cn";
 export function SourcePanel({
   citations,
   presentedCitations,
+  desktopRail = false,
 }: {
   citations?: CitationSnapshot[];
   presentedCitations?: PresentedCitation[];
+  desktopRail?: boolean;
 }) {
   const items =
     presentedCitations ??
@@ -24,7 +26,13 @@ export function SourcePanel({
     );
   if (items.length === 0) return null;
   return (
-    <aside className="space-y-3 rounded-xl border border-[color:var(--cs-border)] bg-white/[0.86] p-3 text-xs text-[color:var(--cs-muted)] shadow-[var(--cs-shadow-sm)]">
+    <aside
+      className={cn(
+        "space-y-3 rounded-xl border border-[color:var(--cs-border)] bg-white/[0.86] p-3 text-xs text-[color:var(--cs-muted)] shadow-[var(--cs-shadow-sm)]",
+        desktopRail &&
+          "max-h-full w-full overflow-y-auto overscroll-contain",
+      )}
+    >
       <div className="flex items-center justify-between gap-3 border-b border-[color:var(--cs-divider)] pb-2">
         <div className="flex items-center gap-2 font-semibold text-[color:var(--cs-ink)]">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#e4f3fb] text-[color:var(--cs-primary)]">
