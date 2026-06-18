@@ -55,24 +55,29 @@ export async function POST(request: NextRequest) {
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const output = await startPipelinePreview({
-    actor,
-    fileName: file.name,
-    bytes,
-    title: stringField(form.get("title")),
-    sourceChannel: stringField(form.get("sourceChannel")),
-    issuingBody: stringField(form.get("issuingBody")),
-    jurisdiction: stringField(form.get("jurisdiction")),
-    docType: normalizeDocType(stringField(form.get("docType"))).pipeline,
-  });
-  const saved = savePreviewSnapshot({
-    actor,
-    fileName: file.name,
-    sourceChannel: stringField(form.get("sourceChannel")) ?? "",
-    output,
-  });
+  try {
+    const output = await startPipelinePreview({
+      actor,
+      fileName: file.name,
+      bytes,
+      title: stringField(form.get("title")),
+      sourceChannel: stringField(form.get("sourceChannel")),
+      issuingBody: stringField(form.get("issuingBody")),
+      jurisdiction: stringField(form.get("jurisdiction")),
+      docType: normalizeDocType(stringField(form.get("docType"))).pipeline,
+    });
+    const saved = savePreviewSnapshot({
+      actor,
+      fileName: file.name,
+      sourceChannel: stringField(form.get("sourceChannel")) ?? "",
+      output,
+    });
 
-  return NextResponse.json({ previewId: saved.previewId, output });
+    return NextResponse.json({ previewId: saved.previewId, output });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 }
 
 function stringField(value: FormDataEntryValue | null): string | undefined {
