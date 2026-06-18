@@ -3,15 +3,42 @@
 // 对话窗口：消费 /api/chat 的 SSE 流。
 // ⚠️ 禁止在此组件直接 fetch DeepSeek API；所有问答逻辑经 /api/chat → lib/knowledge（铁律二）。
 
+import { useEffect, useRef } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { QueryInput } from "./QueryInput";
 import { SourcePanel } from "./SourcePanel";
 import { Button } from "@/components/ui/Button";
 import { useQaClientSession } from "./qa-client-session";
 
+const SCROLL_THRESHOLD = 80;
+
 export function ChatWindow() {
   const { messages, busy, ready, latestCitations, send } =
     useQaClientSession();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledUp = useRef(false);
+  const prevMessageCount = useRef(0);
+
+  useEffect(() => {
+    if (messages.length > prevMessageCount.current) {
+      userScrolledUp.current = false;
+    }
+    prevMessageCount.current = messages.length;
+
+    if (userScrolledUp.current) return;
+    const frame = requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [messages]);
+
+  function handleScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    userScrolledUp.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight >= SCROLL_THRESHOLD;
+  }
 
   return (
     <div className="grid min-h-[560px] flex-1 gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_19rem]">
@@ -34,7 +61,7 @@ export function ChatWindow() {
             知识库已就绪
           </span>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto px-5 py-5">
+        <div ref={scrollRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-auto px-5 py-5">
           {messages.length === 0 ? (
             <EmptyState disabled={busy || !ready} onSend={send} />
           ) : (
