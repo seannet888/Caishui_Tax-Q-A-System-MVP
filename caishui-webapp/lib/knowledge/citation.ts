@@ -9,6 +9,13 @@ import type {
 
 export const MAX_EVIDENCE_EXCERPT_LENGTH = 2000;
 
+const DOC_NUMBER_PATTERN =
+  /(?:财税[〔\[]\d{4}[〕\]]\d+号|国家税务总局公告\d{4}年第\d+号)/g;
+
+function normalizeDocNumber(docNumber: string): string {
+  return docNumber.replace("[", "〔").replace("]", "〕");
+}
+
 function truncateAtSemanticBoundary(content: string): {
   text: string;
   isTruncated: boolean;
@@ -102,9 +109,9 @@ export function checkCitationGrounding(
   answerText: string,
   citations: CitationSnapshot[],
 ): GroundingResult {
-  const indexes = Array.from(answerText.matchAll(/\[(\d+)\]/g)).map((match) =>
-    Number(match[1]),
-  );
+  const indexes = Array.from(
+    answerText.matchAll(/(?<!财税)\[(\d+)\](?!\d+号)/g),
+  ).map((match) => Number(match[1]));
   const errors: string[] = [];
 
   if (indexes.length === 0) {
@@ -118,16 +125,22 @@ export function checkCitationGrounding(
   }
 
   const citedDocNumbers = new Set(
-    citations.map((c) => c.docNumber).filter((v): v is string => Boolean(v)),
+    citations
+      .map((c) => c.docNumber)
+      .filter((v): v is string => Boolean(v))
+      .map(normalizeDocNumber),
   );
+  for (const c of citations) {
+    for (const match of c.evidenceExcerpt.matchAll(DOC_NUMBER_PATTERN)) {
+      citedDocNumbers.add(normalizeDocNumber(match[0]));
+    }
+  }
   const mentionedDocNumbers = Array.from(
-    answerText.matchAll(
-      /(?:财税〔\d{4}〕\d+号|国家税务总局公告\d{4}年第\d+号)/g,
-    ),
+    answerText.matchAll(DOC_NUMBER_PATTERN),
   ).map((match) => match[0]);
 
   for (const docNumber of mentionedDocNumbers) {
-    if (!citedDocNumbers.has(docNumber)) {
+    if (!citedDocNumbers.has(normalizeDocNumber(docNumber))) {
       errors.push(`unmatched_doc_number:${docNumber}`);
     }
   }

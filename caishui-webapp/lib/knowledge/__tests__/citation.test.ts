@@ -41,6 +41,15 @@ describe("checkCitationGrounding", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("不将文号中的方括号误识别为引用编号", () => {
+    const result = checkCitationGrounding(
+      "参见财税[2000]42号[1]。",
+      [snap({ docNumber: "财税〔2000〕42号" })],
+    );
+    expect(result.ok).toBe(true);
+    expect(result.usedCitationIndexes).toEqual([1]);
+  });
+
   it("拒绝没有使用任何引用的正式答案", () => {
     const result = checkCitationGrounding(
       "研发费用可以按规定加计扣除。",
@@ -58,6 +67,34 @@ describe("checkCitationGrounding", () => {
     ]);
     expect(result.ok).toBe(false);
     expect(result.errors.some((e) => e.startsWith("unmatched_doc_number"))).toBe(true);
+  });
+
+  it("答案中出现的文号如果存在于证据正文中则允许通过", () => {
+    const result = checkCitationGrounding(
+      "营业税条款已因财税〔2009〕61号而失效[1]。",
+      [
+        snap({
+          docNumber: "财税〔2000〕42号",
+          evidenceExcerpt:
+            "注释：条款失效，有关营业税规定失效。参见：财税〔2009〕61号。",
+        }),
+      ],
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("证据正文中使用方括号风格的文号也能匹配", () => {
+    const result = checkCitationGrounding(
+      "营业税条款已因财税〔2009〕61号而失效[1]。",
+      [
+        snap({
+          docNumber: "财税〔2000〕42号",
+          evidenceExcerpt:
+            "（此文件有关营业税规定已废止或失效财税[2009]61号）",
+        }),
+      ],
+    );
+    expect(result.ok).toBe(true);
   });
 });
 
