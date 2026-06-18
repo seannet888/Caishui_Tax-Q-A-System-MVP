@@ -36,10 +36,11 @@ export async function requestPipeline(input: {
     };
   }
 
+  const responseText = await response.text();
   return {
     ok: response.ok,
     status: response.status,
-    data: parsePipelineResponseBody(await response.text()),
+    data: parsePipelineResponseBody(responseText),
   };
 }
 

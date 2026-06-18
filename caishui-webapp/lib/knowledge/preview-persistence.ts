@@ -1,4 +1,7 @@
 import {
+  randomUUID,
+} from "node:crypto";
+import {
   existsSync,
   mkdirSync,
   readdirSync,
@@ -50,7 +53,7 @@ const defaultPersistence = createPreviewPersistence({
 export function createPreviewPersistence({
   store,
   now = () => new Date(),
-  id = () => `preview_${crypto.randomUUID()}`,
+  id = () => `preview_${randomUUID()}`,
   ttlMs = DEFAULT_TTL_MS,
 }: {
   store: PreviewSnapshotStore;

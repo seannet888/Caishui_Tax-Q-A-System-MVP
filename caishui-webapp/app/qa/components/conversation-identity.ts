@@ -8,6 +8,17 @@ export interface ConversationIdentityStorage {
   setItem(key: string, value: string): void;
 }
 
+function generateUuid(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  // 降级方案：基于 Date.now + 随机数生成 UUID v4 格式
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Date.now() + Math.random() * 16) % 16 | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 export function getOrCreateConversationId(input: {
   storage: ConversationIdentityStorage;
   createId: () => string;
@@ -31,6 +42,6 @@ export function getOrCreateConversationId(input: {
 export function getBrowserConversationId(): string {
   return getOrCreateConversationId({
     storage: window.localStorage,
-    createId: () => crypto.randomUUID(),
+    createId: generateUuid,
   });
 }
